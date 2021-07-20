@@ -1,0 +1,9 @@
+version: 3.1
+
+version: '3.7'
+services:
+ helix-honeypot:
+    build: ./
+    ports:
+        - "8000:8000"
+    command: gunicorn -w 1 -b 0.0.0.0:8000 wsgi:helix_honeypot

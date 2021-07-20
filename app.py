@@ -4,13 +4,10 @@ from routes.pod_routes import pod_routes
 from routes.default import default_routes
 
 
-app= Flask(__name__)
-app.register_blueprint(api_routes)
-app.register_blueprint(pod_routes)
-app.register_blueprint(default_routes)
+helix_honeypot = Flask(__name__)
+helix_honeypot.register_blueprint(api_routes)
+helix_honeypot.register_blueprint(pod_routes)
+helix_honeypot.register_blueprint(default_routes)
 
-
-#  main thread of execution to start the server
-
-if __name__=='__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    helix_honeypot.run(debug=False)
