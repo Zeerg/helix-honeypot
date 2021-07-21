@@ -8,4 +8,4 @@ RUN chown -R python:python /app \
     && pipenv install --system --deploy --ignore-pipfile
 USER python
 EXPOSE 8000
-CMD ["gunicorn" "-w" "1" "-b" "0.0.0.0:8000" "wsgi:helix_honeypot"]
+CMD ["gunicorn" "-w" "1" "-b" "0.0.0.0:8000" "wsgi:helix_honeypot" "--access-logfile" "-"]
