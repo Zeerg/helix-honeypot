@@ -1,4 +1,4 @@
-system_pods = {
+{
     "kind": "PodList",
     "apiVersion": "v1",
     "metadata": {
