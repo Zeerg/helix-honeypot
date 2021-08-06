@@ -125,6 +125,6 @@
         "/readyz/poststarthook/start-kube-aggregator-informers",
         "/readyz/poststarthook/start-kube-apiserver-admission-initializer",
         "/readyz/shutdown",
-        "/version",
+        "/version"
     ]
 }

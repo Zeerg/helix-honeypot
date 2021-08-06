@@ -7,7 +7,7 @@
             "singularName": "",
             "namespaced": true,
             "kind": "Binding",
-            "verbs": ["create"],
+            "verbs": ["create"]
         },
         {
             "name": "componentstatuses",
@@ -15,7 +15,7 @@
             "namespaced": false,
             "kind": "ComponentStatus",
             "verbs": ["get", "list"],
-            "shortNames": ["cs"],
+            "shortNames": ["cs"]
         },
         {
             "name": "configmaps",
@@ -30,10 +30,10 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["cm"],
-            "storageVersionHash": "qFsyl6wFWjQ=",
+            "storageVersionHash": "qFsyl6wFWjQ="
         },
         {
             "name": "endpoints",
@@ -48,10 +48,10 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["ep"],
-            "storageVersionHash": "fWeeMqaN/OA=",
+            "storageVersionHash": "fWeeMqaN/OA="
         },
         {
             "name": "events",
@@ -66,10 +66,10 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["ev"],
-            "storageVersionHash": "r2yiGXH7wu8=",
+            "storageVersionHash": "r2yiGXH7wu8="
         },
         {
             "name": "limitranges",
@@ -84,10 +84,10 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["limits"],
-            "storageVersionHash": "EBKMFVe6cwo=",
+            "storageVersionHash": "EBKMFVe6cwo="
         },
         {
             "name": "namespaces",
@@ -101,24 +101,24 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["ns"],
-            "storageVersionHash": "Q3oi5N2YM8M=",
+            "storageVersionHash": "Q3oi5N2YM8M="
         },
         {
             "name": "namespaces/finalize",
             "singularName": "",
             "namespaced": false,
             "kind": "Namespace",
-            "verbs": ["update"],
+            "verbs": ["update"]
         },
         {
             "name": "namespaces/status",
             "singularName": "",
             "namespaced": false,
             "kind": "Namespace",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "nodes",
@@ -133,24 +133,24 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["no"],
-            "storageVersionHash": "XwShjMxG9Fs=",
+            "storageVersionHash": "XwShjMxG9Fs="
         },
         {
             "name": "nodes/proxy",
             "singularName": "",
             "namespaced": false,
             "kind": "NodeProxyOptions",
-            "verbs": ["create", "delete", "get", "patch", "update"],
+            "verbs": ["create", "delete", "get", "patch", "update"]
         },
         {
             "name": "nodes/status",
             "singularName": "",
             "namespaced": false,
             "kind": "Node",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "persistentvolumeclaims",
@@ -165,17 +165,17 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["pvc"],
-            "storageVersionHash": "QWTyNDq0dC4=",
+            "storageVersionHash": "QWTyNDq0dC4="
         },
         {
             "name": "persistentvolumeclaims/status",
             "singularName": "",
             "namespaced": true,
             "kind": "PersistentVolumeClaim",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "persistentvolumes",
@@ -190,17 +190,17 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["pv"],
-            "storageVersionHash": "HN/zwEC+JgM=",
+            "storageVersionHash": "HN/zwEC+JgM="
         },
         {
             "name": "persistentvolumes/status",
             "singularName": "",
             "namespaced": false,
             "kind": "PersistentVolume",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "pods",
@@ -215,25 +215,25 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["po"],
             "categories": ["all"],
-            "storageVersionHash": "xPOwRZ+Yhw8=",
+            "storageVersionHash": "xPOwRZ+Yhw8="
         },
         {
             "name": "pods/attach",
             "singularName": "",
             "namespaced": true,
             "kind": "PodAttachOptions",
-            "verbs": ["create", "get"],
+            "verbs": ["create", "get"]
         },
         {
             "name": "pods/binding",
             "singularName": "",
             "namespaced": true,
             "kind": "Binding",
-            "verbs": ["create"],
+            "verbs": ["create"]
         },
         {
             "name": "pods/eviction",
@@ -242,42 +242,42 @@
             "group": "policy",
             "version": "v1beta1",
             "kind": "Eviction",
-            "verbs": ["create"],
+            "verbs": ["create"]
         },
         {
             "name": "pods/exec",
             "singularName": "",
             "namespaced": true,
             "kind": "PodExecOptions",
-            "verbs": ["create", "get"],
+            "verbs": ["create", "get"]
         },
         {
             "name": "pods/log",
             "singularName": "",
             "namespaced": true,
             "kind": "Pod",
-            "verbs": ["get"],
+            "verbs": ["get"]
         },
         {
             "name": "pods/portforward",
             "singularName": "",
             "namespaced": true,
             "kind": "PodPortForwardOptions",
-            "verbs": ["create", "get"],
+            "verbs": ["create", "get"]
         },
         {
             "name": "pods/proxy",
             "singularName": "",
             "namespaced": true,
             "kind": "PodProxyOptions",
-            "verbs": ["create", "delete", "get", "patch", "update"],
+            "verbs": ["create", "delete", "get", "patch", "update"]
         },
         {
             "name": "pods/status",
             "singularName": "",
             "namespaced": true,
             "kind": "Pod",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "podtemplates",
@@ -292,9 +292,9 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
-            "storageVersionHash": "LIXB2x4IFpk=",
+            "storageVersionHash": "LIXB2x4IFpk="
         },
         {
             "name": "replicationcontrollers",
@@ -309,11 +309,11 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["rc"],
             "categories": ["all"],
-            "storageVersionHash": "Jond2If31h0=",
+            "storageVersionHash": "Jond2If31h0="
         },
         {
             "name": "replicationcontrollers/scale",
@@ -322,14 +322,14 @@
             "group": "autoscaling",
             "version": "v1",
             "kind": "Scale",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "replicationcontrollers/status",
             "singularName": "",
             "namespaced": true,
             "kind": "ReplicationController",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "resourcequotas",
@@ -344,17 +344,17 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["quota"],
-            "storageVersionHash": "8uhSgffRX6w=",
+            "storageVersionHash": "8uhSgffRX6w="
         },
         {
             "name": "resourcequotas/status",
             "singularName": "",
             "namespaced": true,
             "kind": "ResourceQuota",
-            "verbs": ["get", "patch", "update"],
+            "verbs": ["get", "patch", "update"]
         },
         {
             "name": "secrets",
@@ -369,9 +369,9 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
-            "storageVersionHash": "S6u1pOWzb84=",
+            "storageVersionHash": "S6u1pOWzb84="
         },
         {
             "name": "serviceaccounts",
@@ -386,10 +386,10 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["sa"],
-            "storageVersionHash": "pbx9ZvyFpBE=",
+            "storageVersionHash": "pbx9ZvyFpBE="
         },
         {
             "name": "services",
@@ -403,25 +403,25 @@
                 "list",
                 "patch",
                 "update",
-                "watch",
+                "watch"
             ],
             "shortNames": ["svc"],
             "categories": ["all"],
-            "storageVersionHash": "0/CO1lhkEBI=",
+            "storageVersionHash": "0/CO1lhkEBI="
         },
         {
             "name": "services/proxy",
             "singularName": "",
             "namespaced": true,
             "kind": "ServiceProxyOptions",
-            "verbs": ["create", "delete", "get", "patch", "update"],
+            "verbs": ["create", "delete", "get", "patch", "update"]
         },
         {
             "name": "services/status",
             "singularName": "",
             "namespaced": true,
             "kind": "Service",
-            "verbs": ["get", "patch", "update"],
-        },
-    ],
+            "verbs": ["get", "patch", "update"]
+        }
+    ]
 }

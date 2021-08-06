@@ -3,7 +3,7 @@
     "apiVersion": "v1",
     "metadata": {
         "selfLink": "/api/v1/namespaces/kube-system/pods",
-        "resourceVersion": "10092",
+        "resourceVersion": "10092"
     },
     "items": [
         {
@@ -23,7 +23,7 @@
                         "name": "coredns-f9fd979d6",
                         "uid": "36cd8b07-ad0d-4780-a632-c77cc75420a5",
                         "controller": true,
-                        "blockOwnerDeletion": true,
+                        "blockOwnerDeletion": true
                     }
                 ],
                 "managedFields": [

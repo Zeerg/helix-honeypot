@@ -16,11 +16,12 @@ func main() {
 
   // Routes
   e.GET("/", rootHandler)
+  e.get("/api/v1", apiHandler)
   e.GET("/openapi/v2", openApiHandler)
   e.GET("/api/v1/namespaces/:namespace/pods", podsHandler)
 
   // Start server
-  e.Logger.Fatal(e.Start(":8080"))
+  e.Logger.Fatal(e.Start(":8000"))
 }
 
 // Handlers
@@ -31,5 +32,8 @@ func openApiHandler(c echo.Context) error {
 	return c.String(http.StatusOK, "Api Route")
 }
 func podsHandler(c echo.Context) error {
-	return c.String(http.StatusOK, "Api Route")
+	return c.String(http.StatusOK, "Pod Route")
+}
+func apiHandler(c echo.Context) error {
+	return c.String(http.StatusOK, "Pod Route")
 }
