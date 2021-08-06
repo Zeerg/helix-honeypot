@@ -45,5 +45,7 @@ func OpenApiHandler(c echo.Context) error {
 	gzipEtag := computeETag(gzipDoc)
 	c.Response().Header().Set("ETAG", gzipEtag)
 	c.Response().Header().Set("Vary", "Accept")
+	c.Response().Header().Set("Content-Type", "application/octet-stream; charset=UTF-8")
+	c.Response().Header().Set("Content-Encoding", "gzip")
 	return c.HTMLBlob(http.StatusOK, gzipDoc)
 }

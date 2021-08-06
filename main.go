@@ -16,6 +16,7 @@ func main() {
 
   // Routes
   e.GET("/", handler.RootHandler)
+  
   e.GET("/api/v1", handler.ApiHandler)
   e.GET("/openapi/v2", handler.OpenApiHandler)
 
