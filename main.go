@@ -15,13 +15,21 @@ func main() {
   e.Use(middleware.Recover())
 
   // Routes
-  e.GET("/", hello)
+  e.GET("/", rootHandler)
+  e.GET("/openapi/v2", openApiHandler)
+  e.GET("/api/v1/namespaces/:namespace/pods", podsHandler)
 
   // Start server
-  e.Logger.Fatal(e.Start(":1323"))
+  e.Logger.Fatal(e.Start(":8080"))
 }
 
-// Handler
-func hello(c echo.Context) error {
-  return c.String(http.StatusOK, "Hello, World!")
+// Handlers
+func rootHandler(c echo.Context) error {
+	return c.String(http.StatusOK, "Root Route")
+}
+func openApiHandler(c echo.Context) error {
+	return c.String(http.StatusOK, "Api Route")
+}
+func podsHandler(c echo.Context) error {
+	return c.String(http.StatusOK, "Api Route")
 }
