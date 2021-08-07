@@ -16,13 +16,15 @@ func main() {
 
   // Routes
   e.GET("/", handler.RootHandler)
-  
-  e.GET("/api/v1", handler.ApiHandler)
+
+  e.GET("/api/v1", handler.ApiV1Handler)
+  e.GET("/api", handler.ApisHandler)
+  e.GET("/apis", handler.ApisHandler)
   e.GET("/openapi/v2", handler.OpenApiHandler)
 
   e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
-  e.POST("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
-  // Before we start we should propagate the JSON files
+
+  e.POST("/api*", handler.PostHandler)
 
   // Start server
   e.Logger.Fatal(e.Start(":8000"))
