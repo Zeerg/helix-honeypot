@@ -16,8 +16,8 @@ type rootApis struct {
 }
 
 // Root Route Handler
-func ApisHandler(c echo.Context) error {
-	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/api_root.json")
+func ApiHandler(c echo.Context) error {
+	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/api.json")
     if err != nil {
       fmt.Print(err)
     }

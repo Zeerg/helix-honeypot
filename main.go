@@ -17,9 +17,9 @@ func main() {
   // Routes
   e.GET("/", handler.RootHandler)
 
-  e.GET("/api/v1", handler.ApiV1Handler)
-  e.GET("/api", handler.ApisHandler)
-  e.GET("/apis", handler.ApisHandler)
+  e.GET("/api/v1", handler.ApiResourceList)
+  e.GET("/api", handler.ApiHandler)
+  e.GET("/apis", handler.ApiGroupList)
   e.GET("/openapi/v2", handler.OpenApiHandler)
 
   e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
