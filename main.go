@@ -20,6 +20,7 @@ func main() {
   e.GET("/api/v1", handler.ApiResourceList)
   e.GET("/api", handler.ApiHandler)
   e.GET("/apis", handler.ApiGroupList)
+  e.GET("/apis/:service/:version", handler.ServiceHandler)
   e.GET("/openapi/v2", handler.OpenApiHandler)
 
   e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
