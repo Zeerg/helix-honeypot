@@ -4,5 +4,6 @@
 
 ---
 # Introduction
+Helix is a honeypot that fakes the K8s API server
 # Deployment
 # Local Testing

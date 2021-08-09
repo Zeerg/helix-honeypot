@@ -20,5 +20,5 @@ func ServiceHandler(c echo.Context) error {
     }
 	var result map[string]interface{}
 	json.Unmarshal(jsonFile, &result)
-	return c.JSON(http.StatusOK, jsonFile)
+	return c.JSON(http.StatusOK, result)
 }
