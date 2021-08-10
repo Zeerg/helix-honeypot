@@ -4,11 +4,11 @@
 
 ---
 # Introduction
-Helix is a honeypot that fakes the K8s API server
+Helix is a honeypot that fakes the K8s API server. All events are logged to stdout 
 # Local Testing
 Clone this repo
 ```
-go run main.go
+docker-compose up -d
 ```
 Setup your kubeconfig for helix
 ```

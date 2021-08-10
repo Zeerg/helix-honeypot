@@ -30,19 +30,19 @@ func OpenApiHandler(c echo.Context) error {
 
 	openApiYamlPath, err:= filepath.Abs("./openapi/k8s_v1.19.7_openapi.yaml")
 	if err != nil {
-		fmt.Print(err)
+		c.Logger().Print(err)
 	}
 	openApiData, err := ioutil.ReadFile(openApiYamlPath)
 	if err != nil {
-		fmt.Print(err)
+		c.Logger().Print(err)
 	}
 	openApiDoc, err := openapi_v2.ParseDocument(openApiData)
 	if err != nil {
-		fmt.Print(err)
+		c.Logger().Print(err)
 	}
 	binaryDoc, err := proto.Marshal(openApiDoc)
 	if err != nil {
-		fmt.Print(err)
+		c.Logger().Print(err)
 	}
 	gzipDoc := gzipHelper(binaryDoc)
 	gzipEtag := computeETag(gzipDoc)

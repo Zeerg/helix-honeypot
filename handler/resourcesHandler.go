@@ -4,25 +4,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"encoding/json"
-    "fmt"
     "io/ioutil"
 )
-type podsStruct struct {
-	APIVersion string        `json:"apiVersion"`
-	Items      []interface{} `json:"items"`
-	Kind       string        `json:"kind"`
-	Metadata   struct {
-		ResourceVersion string `json:"resourceVersion"`
-		SelfLink        string `json:"selfLink"`
-	} `json:"metadata"`
-}
+
 // Pods Handler for default routes etc..Just returns blank
 func PodsHandler(c echo.Context) error {
 	jsonFile, err := ioutil.ReadFile("./kube_json/default_pods.json")
     if err != nil {
-      fmt.Print(err)
+      c.Logger().Print(err)
     }
-	var data podsStruct
+	var data map[string]interface{}
 	err = json.Unmarshal(jsonFile, &data)
 
 	return c.JSON(http.StatusOK, data)
@@ -32,7 +23,7 @@ func ResourceHandler(c echo.Context) error {
 	json_map := make(map[string]interface{})
 	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
 	if err != nil {
-		fmt.Print(err)
+		c.Logger().Print(err)
 	}
 	return c.JSON(404, json_map)
 }

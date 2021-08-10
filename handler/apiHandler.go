@@ -4,7 +4,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"encoding/json"
-    "fmt"
     "io/ioutil"
 )
 
@@ -49,7 +48,7 @@ type apiGroupList struct {
 func ApiHandler(c echo.Context) error {
 	jsonFile, err := ioutil.ReadFile("./kube_json/api.json")
     if err != nil {
-      fmt.Print(err)
+		c.Logger().Print(err)
     }
 	var data rootApis
 	err = json.Unmarshal(jsonFile, &data)
@@ -60,7 +59,7 @@ func ApiHandler(c echo.Context) error {
 func ApiResourceList(c echo.Context) error {
 	jsonFile, err := ioutil.ReadFile("./kube_json/api_resourcelist.json")
     if err != nil {
-      fmt.Print(err)
+		c.Logger().Print(err)
     }
 	var data apiResourceList
 	err = json.Unmarshal(jsonFile, &data)
@@ -70,7 +69,7 @@ func ApiResourceList(c echo.Context) error {
 func ApiGroupList(c echo.Context) error {
 	jsonFile, err := ioutil.ReadFile("./kube_json/api_grouplist.json")
     if err != nil {
-      fmt.Print(err)
+		c.Logger().Print(err)
     }
 	var data apiGroupList
 	err = json.Unmarshal(jsonFile, &data)

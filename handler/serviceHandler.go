@@ -16,7 +16,7 @@ func ServiceHandler(c echo.Context) error {
 	filePath := fmt.Sprintf("%s%s/%s/%s", servicePathBase, service, version, fileName)
 	jsonFile, err := ioutil.ReadFile(filePath)
     if err != nil {
-      fmt.Print(err)
+		c.Logger().Print(err)
     }
 	var result map[string]interface{}
 	json.Unmarshal(jsonFile, &result)
