@@ -13,7 +13,7 @@ type rootJson struct {
 
 // Root Route Handler
 func RootHandler(c echo.Context) error {
-	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/root.json")
+	jsonFile, err := ioutil.ReadFile("./kube_json/root.json")
     if err != nil {
       fmt.Print(err)
     }

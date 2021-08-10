@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	//"path/filepath"
+	"path/filepath"
 	"io/ioutil"
 	"fmt"
 	"bytes"
@@ -28,18 +28,21 @@ func computeETag(data []byte) string {
 // OpenAPI Handler becuase unless the swagger doc is cached locally it's transferred on every request :(
 func OpenApiHandler(c echo.Context) error {
 
-	//openApiYamlPath, _ := filepath.Abs("/Users/zeerg/starfleet/helix-honeypot/openapi/k8s_v1.19.7_openapi.yaml")
-	openApiData, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/openapi/k8s_v1.19.7_openapi.yaml")
+	openApiYamlPath, err:= filepath.Abs("./openapi/k8s_v1.19.7_openapi.yaml")
 	if err != nil {
-		return err
+		fmt.Print(err)
+	}
+	openApiData, err := ioutil.ReadFile(openApiYamlPath)
+	if err != nil {
+		fmt.Print(err)
 	}
 	openApiDoc, err := openapi_v2.ParseDocument(openApiData)
 	if err != nil {
-		return err
+		fmt.Print(err)
 	}
 	binaryDoc, err := proto.Marshal(openApiDoc)
 	if err != nil {
-		return err
+		fmt.Print(err)
 	}
 	gzipDoc := gzipHelper(binaryDoc)
 	gzipEtag := computeETag(gzipDoc)

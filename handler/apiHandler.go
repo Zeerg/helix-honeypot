@@ -47,7 +47,7 @@ type apiGroupList struct {
 }
 // Root Route Handler
 func ApiHandler(c echo.Context) error {
-	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/api.json")
+	jsonFile, err := ioutil.ReadFile("./kube_json/api.json")
     if err != nil {
       fmt.Print(err)
     }
@@ -58,7 +58,7 @@ func ApiHandler(c echo.Context) error {
 }
 // Basic API Handler
 func ApiResourceList(c echo.Context) error {
-	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/api_resourcelist.json")
+	jsonFile, err := ioutil.ReadFile("./kube_json/api_resourcelist.json")
     if err != nil {
       fmt.Print(err)
     }
@@ -68,12 +68,11 @@ func ApiResourceList(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 func ApiGroupList(c echo.Context) error {
-	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/api_grouplist.json")
+	jsonFile, err := ioutil.ReadFile("./kube_json/api_grouplist.json")
     if err != nil {
       fmt.Print(err)
     }
 	var data apiGroupList
 	err = json.Unmarshal(jsonFile, &data)
-
 	return c.JSON(http.StatusOK, data)
 }

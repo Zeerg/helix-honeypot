@@ -9,7 +9,7 @@ import (
 )
 //Pods Handler
 func ServiceHandler(c echo.Context) error {
-	servicePathBase := "/Users/zeerg/starfleet/helix-honeypot/kube_json/resource_dump/"
+	servicePathBase := "./kube_json/resource_dump/"
 	service := c.Param("service")
 	version := c.Param("version")
 	fileName := "serverresources.json"

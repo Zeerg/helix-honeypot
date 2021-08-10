@@ -18,7 +18,7 @@ type podsStruct struct {
 }
 // Pods Handler for default routes etc..Just returns blank
 func PodsHandler(c echo.Context) error {
-	jsonFile, err := ioutil.ReadFile("/Users/zeerg/starfleet/helix-honeypot/kube_json/default_pods.json")
+	jsonFile, err := ioutil.ReadFile("./kube_json/default_pods.json")
     if err != nil {
       fmt.Print(err)
     }
