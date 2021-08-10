@@ -7,17 +7,13 @@ import (
     "fmt"
     "io/ioutil"
 )
-type rootJson struct {
-	Paths []string `json:"paths"`
-}
-
 // Root Route Handler
 func RootHandler(c echo.Context) error {
 	jsonFile, err := ioutil.ReadFile("./kube_json/root.json")
     if err != nil {
       fmt.Print(err)
     }
-	var data rootJson
+	var data map[string]interface{}
 	err = json.Unmarshal(jsonFile, &data)
 
 	return c.JSON(http.StatusOK, data)
