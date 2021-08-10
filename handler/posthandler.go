@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/labstack/echo/v4"
-
+	"encoding/json"
 )
 
 type User struct {
@@ -12,9 +12,10 @@ type User struct {
 
 //Pods Handler
 func PostHandler(c echo.Context) error {
-	u := &User{
-		Name:  "Nice",
-		Email: "42069",
-	  }
-	return c.JSON(201, u)
+	json_map := make(map[string]interface{})
+	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
+	if err != nil {
+		return err
+	}
+	return c.JSON(201, json_map)
 }
