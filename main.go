@@ -14,7 +14,7 @@ func main() {
   e.Use(middleware.Logger())
   e.Use(middleware.Recover())
 
-  // Routes
+  // Routes for basic k8s operations
   e.GET("/", handler.RootHandler)
   e.GET("/openapi/v2", handler.OpenApiHandler)
   e.GET("/api/v1", handler.ApiResourceList)
