@@ -23,7 +23,11 @@ func main() {
   e.GET("/apis/apps/v1/namespaces/:namespace/:workload/:app", handler.ResourceHandler)
   e.GET("/apis/:service/:version", handler.ServiceHandler)
   e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
+  e.GET("/api/v1/pods", handler.PodsHandler)
+  e.GET("/api/v1/secrets", handler.PodsHandler)
   e.POST("/api*", handler.PostHandler)
+
+ 
 
   // Start server
   e.Logger.Fatal(e.Start(":8000"))
