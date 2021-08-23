@@ -23,3 +23,10 @@ Setup your kubeconfig for helix
   user: {}
 ```
 # Deployment
+* Dockerhub
+```
+docker run -d -p80:8000 helixhoneypot/helixhoneypot
+```
+* Logging
+
+For now all logging is done to stdout so if running inside docker you can add a driver to grab them. 

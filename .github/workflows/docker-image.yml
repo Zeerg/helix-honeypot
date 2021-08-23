@@ -22,6 +22,8 @@ jobs:
         docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag helixhoneypot/helixhoneypot:$(date +%s)
+      run: docker build . --file Dockerfile --tag helixhoneypot/helixhoneypot:latest
       
     - name: Docker Push
-      run: docker push helixhoneypot/helixhoneypot
+      run: docker push helixhoneypot/helixhoneypot:$(date +%s)
+      run: docker push helixhoneypot/helixhoneypot:latest
