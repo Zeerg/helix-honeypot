@@ -20,11 +20,12 @@ func main() {
   e.GET("/api/v1", handler.ApiResourceList)
   e.GET("/api", handler.ApiHandler)
   e.GET("/apis", handler.ApiGroupList)
+  e.GET("/apis/apps/v1/namespaces/:namespace/:workload", handler.PodsHandler)
   e.GET("/apis/apps/v1/namespaces/:namespace/:workload/:app", handler.ResourceHandler)
   e.GET("/apis/:service/:version", handler.ServiceHandler)
   e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
-  e.GET("/api/v1/pods", handler.PodsHandler)
-  e.GET("/api/v1/secrets", handler.PodsHandler)
+  e.GET("/apis/extensions/v1beta1/namespaces/:namespace/:resource", handler.PodsHandler)
+  e.GET("/api/v1/:service", handler.PodsHandler)
   e.POST("/api*", handler.PostHandler)
 
  
