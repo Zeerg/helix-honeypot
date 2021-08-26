@@ -11,7 +11,6 @@ WORKDIR /
 
 # Until Go Embed stuff
 COPY --from=build /helix-honeypot /helix-honeypot
-COPY --from=build /app/openapi /openapi
 COPY --from=build /app/kube_json /kube_json
 
 EXPOSE 8000

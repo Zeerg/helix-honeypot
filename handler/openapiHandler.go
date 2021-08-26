@@ -13,7 +13,7 @@ import (
 	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
 )
 // Embed the yaml file with go embed
-//go:embed openapi/k8s_v1.19.7_openapi.yaml
+//go:embed openapiYaml/k8s_v1.19.7_openapi.yaml
 var openApiBytes []byte
 // Kubectl expects gzip usually....I really don't know
 func gzipHelper(data []byte) []byte {
