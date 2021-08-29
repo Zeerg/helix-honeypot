@@ -8,5 +8,6 @@ import (
 func New() *echo.Echo {
 	e := echo.New()
 	e.Logger.SetLevel(log.DEBUG)
+	e.HideBanner = true
 	return e
 }
