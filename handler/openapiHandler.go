@@ -6,15 +6,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha512"
-	_ "embed"
 
 	"github.com/labstack/echo/v4"
 	"github.com/golang/protobuf/proto"
 	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
 )
-// Embed the yaml file with go embed
-//go:embed openapiYaml/k8s_v1.19.7_openapi.yaml
-var openApiBytes []byte
+
 // Kubectl expects gzip usually....I really don't know
 func gzipHelper(data []byte) []byte {
 	var buf bytes.Buffer
@@ -29,8 +26,7 @@ func computeETag(data []byte) string {
 }
 // OpenAPI Handler becuase unless the swagger doc is cached locally it's transferred on every request :(
 func OpenApiHandler(c echo.Context) error {
-
-	openApiDoc, err := openapi_v2.ParseDocument(openApiBytes)
+	openApiDoc, err := openapi_v2.ParseDocument(embedGet("k8s_v1.19.7_openapi.yaml"))
 	if err != nil {
 		c.Logger().Print(err)
 	}
