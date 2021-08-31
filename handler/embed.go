@@ -5,12 +5,12 @@ import (
 	"fmt"
 )
 // Embed the required files
-//go:embed embeded/*
+//go:embed embedded/*
 var embededFS embed.FS
 
 // Embed FS function
 func embedGet(fileName string) []byte {
-	fileBytes, err := embededFS.ReadFile("embeded/" + fileName)
+	fileBytes, err := embededFS.ReadFile("embedded/" + fileName)
 	if err != nil {
 		fmt.Print(err)
 	}
