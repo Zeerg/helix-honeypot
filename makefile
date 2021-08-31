@@ -6,10 +6,13 @@ help:
 	    @echo "build - Build the docker file"
 	    @echo "push - Push to a repo"
 		@echo "up - Bring up docker compose file"
+		@echo "run - Go Run main"
+		@echo "tidy - Go Mody Tidy"
 		@echo "windows - Build windows binary"
 		@echo "linux - Build linux binary"
 		@echo "darwin - Build mac binary"
 		@echo "bins - Make all the bins"
+		@echo "clean - Clean the build dir"
 	    @echo ""
 
 .DEFAULT_GOAL := build-docker
@@ -39,4 +42,7 @@ linux:
 
 darwin: 
 		@env GOOS=darwin GOARCH=amd64 go build -v -o bin/darwin-helix -ldflags="-s -w"  main.go
+
+clean:
+		@rm -rf bin/
 	
