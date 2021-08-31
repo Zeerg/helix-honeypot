@@ -26,7 +26,7 @@ func computeETag(data []byte) string {
 }
 // OpenAPI Handler becuase unless the swagger doc is cached locally it's transferred on every request :(
 func OpenApiHandler(c echo.Context) error {
-	openApiDoc, err := openapi_v2.ParseDocument(embedGet("k8s_v1.19.7_openapi.yaml"))
+	openApiDoc, err := openapi_v2.ParseDocument(embedGet("v1.19.7_openapi.yaml"))
 	if err != nil {
 		c.Logger().Print(err)
 	}

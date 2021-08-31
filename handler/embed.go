@@ -8,9 +8,9 @@ import (
 //go:embed embeded/*
 var embededFS embed.FS
 
-//Embed FS function
+// Embed FS function
 func embedGet(fileName string) []byte {
-	fileBytes, err := embededFS.ReadFile(fileName)
+	fileBytes, err := embededFS.ReadFile("embeded/" + fileName)
 	if err != nil {
 		fmt.Print(err)
 	}
