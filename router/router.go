@@ -6,7 +6,8 @@ import (
 )
 
 func New() *echo.Echo {
-	e := echo.New()
-	e.Logger.SetLevel(log.DEBUG)
-	return e
+	echoRouter := echo.New()
+	echoRouter.Logger.SetLevel(log.DEBUG)
+	echoRouter.HideBanner = true
+	return echoRouter
 }
