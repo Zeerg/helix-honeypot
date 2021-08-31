@@ -6,11 +6,12 @@ WORKDIR /app
 COPY . ./
 RUN go mod download && go build -o /helix-honeypot
 
+#Final Stage
 FROM alpine:latest
 WORKDIR /
-
-# Until Go Embed stuff
 COPY --from=build /helix-honeypot /helix-honeypot
+RUN addgroup -S helix && adduser -S helix -G helix
+USER helix
 
 EXPOSE 8000
 
