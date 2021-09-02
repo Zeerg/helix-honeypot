@@ -29,18 +29,15 @@ func main() {
   e.Use(middleware.Logger())
   e.Use(middleware.Recover())
 
-
-
-  // Routes for basic k8s operations and api calls to info endpoints
-  e.GET("/", handler.RootHandler)
-  e.GET("/openapi/v2", handler.OpenApiHandler)
-  e.GET("/api/v1", handler.ApiResourceList)
-  e.GET("/api", handler.ApiHandler)
-  e.GET("/apis", handler.ApiGroupList)
-  e.GET("/apis/:service/:version", handler.ServiceHandler)
-  e.GET("/apis/apps/v1/namespaces/:namespace/:workload/:app", handler.ResourceHandler)
-  // Routes for Typical API Mode
+  // Routes for Typical API Mode for honeypot logging
   if runMode == "api" {
+    e.GET("/", handler.RootHandler)
+    e.GET("/openapi/v2", handler.OpenApiHandler)
+    e.GET("/api/v1", handler.ApiResourceList)
+    e.GET("/api", handler.ApiHandler)
+    e.GET("/apis", handler.ApiGroupList)
+    e.GET("/apis/:service/:version", handler.ServiceHandler)
+    e.GET("/apis/apps/v1/namespaces/:namespace/:workload/:app", handler.ResourceHandler)
     e.GET("/apis/apps/v1/namespaces/:namespace/:workload", handler.PodsHandler)
     e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
     e.GET("/apis/extensions/v1beta1/namespaces/:namespace/:resource", handler.PodsHandler)
@@ -50,16 +47,10 @@ func main() {
   }
   // Routes for Active Defense Mode
   if runMode == "ad" {
-    e.GET("/apis/apps/v1/namespaces/:namespace/:workload", handler.AdGetHandler)
-    e.GET("/api/v1/namespaces/:namespace/:resource", handler.AdGetHandler)
-    e.GET("/apis/extensions/v1beta1/namespaces/:namespace/:resource", handler.AdGetHandler)
-    e.GET("/api/v1/:service", handler.AdGetHandler)
-    e.POST("/api*", handler.AdPostHandler)
+    e.GET("/*", handler.ActiveDefenseHandler)
+    e.POST("/*", handler.ActiveDefenseHandler)
   }
  
-
- 
-
   // Start server
   e.Logger.Fatal(e.Start(":8000"))
 }
