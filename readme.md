@@ -6,7 +6,14 @@
 [![Docker Image CI](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml)
 
 # Introduction
-Helix is a honeypot that serves two primary purposes. When running in K8s mode it listens and responds as a typical K8s api server(most endpoints). When running in active defense mode the api responses become massive and are meant to disrupt typical internet scanners. 
+Helix is a honeypot that serves two primary purposes. When running in K8s mode it listens and responds as a typical K8s api server(most endpoints). When running in active defense mode the api responses become massive and are meant to disrupt typical internet scanners.
+
+# Usage
+```
+Usage:
+  -mode string
+    	The run mode for the honeypot [api, ad] (default "api")
+```
 
 # Local Testing
 Clone this repo
