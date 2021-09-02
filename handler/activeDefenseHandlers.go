@@ -7,7 +7,7 @@ import (
 )
 
 // Pods Handler for default routes etc..Just returns blank
-func PodsHandler(c echo.Context) error {
+func AdGetHandler(c echo.Context) error {
 	var data map[string]interface{}
 	err := json.Unmarshal(embedGet("empty_list.json"), &data)
 	if err != nil {
@@ -15,12 +15,12 @@ func PodsHandler(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, data)
 }
-// Handler for any k8s resource like deployments etc.
-func ResourceHandler(c echo.Context) error {
+func AdPostHandler(c echo.Context) error {
 	json_map := make(map[string]interface{})
 	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
+	c.Logger().Print(json_map)
 	if err != nil {
 		c.Logger().Print(err)
 	}
-	return c.JSON(404, json_map)
+	return c.JSON(201, json_map)
 }
