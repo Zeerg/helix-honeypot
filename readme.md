@@ -6,7 +6,7 @@
 [![Docker Image CI](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml)
 
 # Introduction
-Helix is a honeypot that serves two primary purposes. When running in K8s mode it listens and responds as a typical K8s api server(most endpoints). When running in active defense mode the api responses become massive and are meant to disrupt typical internet scanners.
+Helix is a honeypot that serves two primary purposes. When running in K8s mode it listens and responds as a typical K8s api server(most endpoints). When running in active defense a never ending response is generated on all api endpoints. 
 
 # Usage
 ```
@@ -20,10 +20,10 @@ Clone this repo
 ```
 docker-compose up -d
 ```
-Setup your kubeconfig for helix
+Setup your kubeconfig for helix 
 ```
 - cluster:
-    server: http://127.0.0.1:8000
+    server: http://127.0.0.1:80
   name: helix
 - context:
     cluster: helix
