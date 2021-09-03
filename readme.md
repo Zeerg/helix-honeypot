@@ -20,10 +20,10 @@ Clone this repo
 ```
 docker-compose up -d
 ```
-Setup your kubeconfig for helix
+Setup your kubeconfig for helix 
 ```
 - cluster:
-    server: http://127.0.0.1:8000
+    server: http://127.0.0.1:80
   name: helix
 - context:
     cluster: helix
