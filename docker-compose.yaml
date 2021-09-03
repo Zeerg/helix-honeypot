@@ -1,9 +1,12 @@
-version: 3.1
-
 version: '3.7'
+
 services:
- helix-honeypot:
-    build: ./
+  helix-honeypot-ad:
+   image: helixhoneypot/helixhoneypot
+   ports:
+     - "8000:8000"
+   entrypoint: [/helix-honeypot, -mode=ad]
+  helix-honeypot:
+    image: helixhoneypot/helixhoneypot
     ports:
-        - "8000:8000"
-    entrypoint: [/helix-honeypot, -mode=ad]
+      - "80:8000"
