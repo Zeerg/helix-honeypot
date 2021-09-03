@@ -7,7 +7,7 @@ services:
      - "8000:8000"
    entrypoint: [/helix-honeypot, -mode=ad]
    volumes:
-     - /dev/random:/dev/random
+     - /dev/urandom:/dev/urandom
   helix-honeypot:
     build: ./
     ports:
