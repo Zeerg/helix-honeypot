@@ -2,11 +2,13 @@ version: '3.7'
 
 services:
   helix-honeypot-ad:
-   image: helixhoneypot/helixhoneypot
+   build: ./
    ports:
      - "8000:8000"
    entrypoint: [/helix-honeypot, -mode=ad]
+   volumes:
+     - /dev/random:/dev/random
   helix-honeypot:
-    image: helixhoneypot/helixhoneypot
+    build: ./
     ports:
       - "80:8000"

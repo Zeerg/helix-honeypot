@@ -11,7 +11,6 @@ FROM alpine:latest
 WORKDIR /
 COPY --from=build /helix-honeypot /helix-honeypot
 RUN addgroup -S helix && adduser -S helix -G helix
-USER helix
 
 EXPOSE 8000
 
