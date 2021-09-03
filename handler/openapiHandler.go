@@ -24,7 +24,7 @@ func gzipHelper(data []byte) []byte {
 func computeETag(data []byte) string {
 	return fmt.Sprintf("\"%X\"", sha512.Sum512(data))
 }
-// OpenAPI Handler becuase unless the swagger doc is cached locally it's transferred on every request :(
+// OpenAPI Handler just sends the swagger doc via proto
 func OpenApiHandler(c echo.Context) error {
 	openApiDoc, err := openapi_v2.ParseDocument(embedGet("v1.19.7_openapi.yaml"))
 	if err != nil {
