@@ -3,9 +3,6 @@
 help:
 	    @echo "Makefile commands:"
 	    @echo ""
-	    @echo "build - Build the docker file"
-	    @echo "push - Push to a repo"
-		@echo "up - Bring up docker compose file"
 		@echo "run - Go Run main"
 		@echo "tidy - Go Mody Tidy"
 		@echo "windows - Build windows binary"
@@ -17,22 +14,16 @@ help:
 
 .DEFAULT_GOAL := build-docker
 
-build-docker:
-	    @docker build . --file Dockerfile --tag helixhoneypot/helixhoneypot:latest
-
-push:
-	    @docker push helixhoneypot/helixhoneypot:latest
-
-up:
-		@docker-compose up -d
-
 run:
 		@go run main.go
+
+download:
+		@go mod download
 
 tidy:
 		@go mod tidy
 
-bins: windows linux darwin
+bins: download windows linux darwin
 
 windows: 
 		@env GOOS=windows GOARCH=amd64 go build -v -o bin/windows-helix -ldflags="-s -w"  main.go
