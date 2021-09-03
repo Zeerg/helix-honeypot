@@ -6,3 +6,4 @@ services:
     build: ./
     ports:
         - "8000:8000"
+    entrypoint: [/helix-honeypot, -mode=ad]

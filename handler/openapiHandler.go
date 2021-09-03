@@ -8,7 +8,7 @@ import (
 	"crypto/sha512"
 
 	"github.com/labstack/echo/v4"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
 )
 
