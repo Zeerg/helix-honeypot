@@ -41,6 +41,7 @@ func main() {
     e.GET("/apis/apps/v1/namespaces/:namespace/:workload", handler.PodsHandler)
     e.GET("/api/v1/namespaces/:namespace/:resource", handler.PodsHandler)
     e.GET("/apis/extensions/v1beta1/namespaces/:namespace/:resource", handler.PodsHandler)
+    e.GET("/apis/extensions/v1beta1/:resource", handler.PodsHandler)
     e.GET("/api/v1/:service", handler.PodsHandler)
     e.POST("/api*", handler.PostHandler)
     
