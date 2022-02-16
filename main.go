@@ -12,7 +12,7 @@ import (
 func main() {
   // Get the run mode
   var runMode string
-  flag.StringVar(&runMode, "mode", "api", "The run mode for the honeypot [api, ad]")
+  flag.StringVar(&runMode, "mode", "api", "The run mode for the honeypot [api, ad, kubelet]")
   flag.Parse()
 
   if len(runMode) == 0 {
@@ -50,6 +50,11 @@ func main() {
   if runMode == "ad" {
     e.GET("/*", handler.ActiveDefenseHandler)
     e.POST("/*", handler.ActiveDefenseHandler)
+  }
+  // Routes for Kubelet
+  if runMode == "kubelet" {
+    e.GET("/*", handler.PodsHandler)
+    e.POST("/*", handler.PostHandler)
   }
  
   // Start server
