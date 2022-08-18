@@ -8,6 +8,6 @@ type HTTPConfig struct {
 func LoadHTTPConfig() HTTPConfig {
 	return HTTPConfig{
 		Host: GetEnv("HELIX_HOST", "0.0.0.0"),
-		Port: GetEnv("HELIX_PORT", "8000"),
+		Port: GetEnv("HELIX_PORT", "80"),
 	}
 }

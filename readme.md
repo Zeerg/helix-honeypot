@@ -35,7 +35,7 @@ Setup your kubeconfig for helix
 # Deployment
 * Dockerhub
 ```
-docker run -d -p80:8000 helixhoneypot/helixhoneypot
+docker run -d -p80:80 helixhoneypot/helixhoneypot
 ```
 * Logging
 
