@@ -9,7 +9,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"google.golang.org/protobuf/proto"
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
+	openapi_v2 "github.com/google/gnostic/openapiv2"
 )
 
 // Kubectl expects gzip usually....I really don't know

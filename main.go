@@ -2,8 +2,9 @@ package main
 
 import (
   "github.com/labstack/echo/v4/middleware"
-  "github.com/zeerg/helix-honeypot/router"
-  "github.com/zeerg/helix-honeypot/handler"
+  "helix-honeypot/router"
+  "helix-honeypot/handler"
+  "helix-honeypot/config"
   "flag"
   "fmt"
   "os"
@@ -19,9 +20,10 @@ func main() {
     fmt.Println("Usage:")
     flag.PrintDefaults()
     os.Exit(1)
-}
+  }
 
-
+  //Config
+  cfg := config.NewConfig()
   // Echo instance
   e := router.New()
 
@@ -53,5 +55,6 @@ func main() {
   }
  
   // Start server
-  e.Logger.Fatal(e.Start(":8000"))
+  serverInfo := fmt.Sprintf("%s:%s", cfg.HTTP.Host, cfg.HTTP.Port)
+  e.Logger.Fatal(e.Start(serverInfo))
 }

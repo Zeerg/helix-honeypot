@@ -4,11 +4,11 @@ services:
   helix-honeypot-ad:
    build: ./
    ports:
-     - "8000:8000"
+     - "8000:80"
    entrypoint: [/helix-honeypot, -mode=ad]
    volumes:
      - /dev/urandom:/dev/urandom
   helix-honeypot:
     build: ./
     ports:
-      - "80:8000"
+      - "80:80"
