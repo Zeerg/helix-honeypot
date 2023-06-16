@@ -50,6 +50,16 @@ func KubeSystemList(c echo.Context) error {
 	return c.JSONBlob(http.StatusOK, data)
 }
 
+// DefaultList returns a fake default namespace
+func DefaultList(c echo.Context) error {
+	data, err := ReadFile("defaultConfig.json")
+	if err != nil {
+		return err
+	}
+
+	return c.JSONBlob(http.StatusOK, data)
+}
+
 // Root Route Handler
 func RootHandler(c echo.Context) error {
 	return getJsonResponse(c, "root.json")

@@ -29,7 +29,22 @@ func writeKubeSystemConfigToFile(kubeSystemConfig map[string]interface{}) error 
 	encoder := json.NewEncoder(file)
 	return encoder.Encode(kubeSystemConfig)
 }
+func writeDefaultConfigToFile(defaultConfig map[string]interface{}) error {
+	// Open a new file for writing only
+	file, err := os.OpenFile(
+		"defaultConfig.json",            // path to the file
+		os.O_WRONLY|os.O_TRUNC|os.O_CREATE, // open the file in write only mode, truncate it if it exists, or create it if it doesn't
+		0755,
+	)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
+	// Serialize the kubeSystemConfig map into JSON
+	encoder := json.NewEncoder(file)
+	return encoder.Encode(defaultConfig)
+}
 func main() {
 	// Define flags for run mode configuration
 	var runMode string
@@ -55,12 +70,27 @@ func main() {
 	// Configure routes based on run mode
 	if runMode == "api" {
 
-		kubesystemConfig := generator.GenerateKubeSystemConfig(cfg)
+		if cfg.GenerateKubeSystem {
+			// generate pods in the kube-system namespace
+			kubesystemConfig := generator.GenerateKubeSystemConfig(cfg, "kube-system")
 
-		if err := writeKubeSystemConfigToFile(kubesystemConfig); err != nil {
-			fmt.Println("Error writing kube system config to file:", err)
-			os.Exit(1)
+			if err := writeKubeSystemConfigToFile(kubesystemConfig); err != nil {
+				fmt.Println("Error writing kube system config to file:", err)
+				os.Exit(1)
+			}
+			e.GET("/api/v1/namespaces/kube-system/pods", handler.KubeSystemList)
 		}
+		if cfg.GenerateRandomness {
+			// generate pods with default namespace
+			defaultConfig := generator.GenerateDefaultNamespaceConfig(cfg, "default")
+
+			if err := writeDefaultConfigToFile(defaultConfig); err != nil {
+				fmt.Println("Error writing kube system config to file:", err)
+				os.Exit(1)
+			}
+			e.GET("/api/v1/namespaces/default/pods", handler.DefaultList)
+		}
+
 		// Routes for Typical API Mode for honeypot logging
 		e.GET("/", handler.RootHandler)
 		e.GET("/openapi/*", handler.OpenApiHandler)
@@ -69,9 +99,7 @@ func main() {
 		e.GET("/apis", handler.ApiGroupList)
 		e.GET("/apis/:service/:version", handler.ServiceHandler)
 		e.GET("/apis/apps/v1/namespaces/:namespace/:workload/:app", handler.ResourceHandler)
-		e.GET("/apis/apps/v1/namespaces/kube-system/:workload", handler.KubeSystemList)
 		e.GET("/apis/apps/v1/namespaces/:namespace/:workload", handler.EmptyListHandler)
-		e.GET("/api/v1/namespaces/kube-system/:workload", handler.KubeSystemList)
 		e.GET("/api/v1/namespaces/:namespace/:resource", handler.EmptyListHandler)
 		e.GET("/apis/extensions/v1beta1/namespaces/:namespace/:resource", handler.EmptyListHandler)
 		e.GET("/apis/extensions/v1beta1/:resource", handler.EmptyListHandler)

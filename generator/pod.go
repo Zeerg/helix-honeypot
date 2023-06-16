@@ -20,6 +20,15 @@ func RandomIP(ipBase string) string {
 	return fmt.Sprintf("%s.%d.%d", strings.Join(splitIP[:2], "."), octet3, octet4)
 }
 
+func GeneratePodTemplateHash() string {
+	hash := ""
+	for i := 0; i < 10; i++ {
+		hash += fmt.Sprintf("%x", rand.Intn(16))
+	}
+	return hash
+}
+
+
 func GenerateColumnDefinitions() []map[string]interface{} {
 	return []map[string]interface{}{
 		{
@@ -88,23 +97,22 @@ func GenerateColumnDefinitions() []map[string]interface{} {
 	}
 }
 
-func GeneratePod(cfg *config.Config) map[string]interface{} {
-	podTypes := []string{"kube-api-server", "kube-controller-manager", "kube-proxy", "kube-scheduler", "storage-provisioner", "vpnkit-controller"}
-	podType := podTypes[rand.Intn(len(podTypes))]
+func GeneratePod(cfg *config.Config, namespace string, podNames []string) map[string]interface{} {
+	podType := podNames[rand.Intn(len(podNames))]
 	uuid := uuid.New().String()
 	ip := RandomIP(cfg.IPBase)
 	creationTimestamp := time.Now().Add(-time.Duration(rand.Intn(48)) * time.Hour) // Random time in last 48 hours
 	age := fmt.Sprintf("%dh", int(time.Since(creationTimestamp).Hours()))          // Age in hours
-
+	podTemplateHash := GeneratePodTemplateHash()
 	pod := map[string]interface{}{
 		"cells": []string{
-			podType,   // Name
+			podType + "-" + podTemplateHash,   // Name
 			"1/1",     // Ready: 1 out of 1 pods are ready
 			"Running", // Status
 			"0",       // Restarts
 			age,       // Age
 			ip,        // IP
-			"node1",   // Node
+			namespace, // Node
 			"<none>",  // Nominated Node
 			"<none>",  // Readiness Gates
 		},
@@ -112,9 +120,26 @@ func GeneratePod(cfg *config.Config) map[string]interface{} {
 			"kind":       "PartialObjectMetadata",
 			"apiVersion": "meta.k8s.io/v1",
 			"metadata": map[string]interface{}{
-				"name":              podType,                                       // Pod name
+				"name":              podType + "-" + podTemplateHash,                     // Pod name
+				"generateName":      podType + "-generate",                         // Generate name
+				"namespace":         namespace,                                     // Namespace
+				"resourceVersion":   rand.Intn(7000),                               // Resource Version
 				"creationTimestamp": creationTimestamp.Format("2006-01-02T15:04Z"), // Convert time to string in RFC3339 format, less precise
 				"uid":               uuid,
+				"labels": map[string]string{
+					"k8s-app":            podType,
+					"pod-template-hash":  podTemplateHash,
+				},
+				"ownerReferences": []map[string]interface{}{
+					{
+						"apiVersion": "apps/v1",
+						"kind":       "ReplicaSet",
+						"name":       podType + "-" + podTemplateHash,
+						"uid":        uuid,
+						"controller": true,
+						"blockOwnerDeletion": true,
+					},
+				},
 			},
 		},
 	}
