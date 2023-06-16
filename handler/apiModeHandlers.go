@@ -1,56 +1,65 @@
 package handler
 
 import (
-	"github.com/labstack/echo/v4"
-	"net/http"
 	"encoding/json"
 	"fmt"
+	"github.com/labstack/echo/v4"
+	"io/ioutil"
+	"net/http"
 )
+
+// ReadFile reads a file and returns its content as a byte array
+func ReadFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
+}
+
+func getJsonResponse(c echo.Context, fileName string) error {
+	var data map[string]interface{}
+	err := json.Unmarshal(embedGet(fileName), &data)
+	if err != nil {
+		c.Logger().Print(err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to process the request",
+		})
+	}
+	return c.JSON(http.StatusOK, data)
+}
+
 // ApiHandler returns the api.json embedded file
 func ApiHandler(c echo.Context) error {
-	var data map[string]interface{}
-	err := json.Unmarshal(embedGet("api.json"), &data)
-	if err != nil {
-		c.Logger().Print(err)
-	}
-	return c.JSON(http.StatusOK, data)
+	return getJsonResponse(c, "api.json")
 }
+
 // ApiResourceList returns the api_resourcelist.json embedded file
 func ApiResourceList(c echo.Context) error {
-	var data map[string]interface{}
-	err := json.Unmarshal(embedGet("api_resourcelist.json"), &data)
-	if err != nil {
-		c.Logger().Print(err)
-	}
-	return c.JSON(http.StatusOK, data)
+	return getJsonResponse(c, "api_resourcelist.json")
 }
+
 // ApiGroupList returns the api_grouplist.json embedded file
 func ApiGroupList(c echo.Context) error {
-	var data map[string]interface{}
-	err := json.Unmarshal(embedGet("api_grouplist.json"), &data)
-	if err != nil {
-		c.Logger().Print(err)
-	}
-	return c.JSON(http.StatusOK, data)
+	return getJsonResponse(c, "api_grouplist.json")
 }
+
+// KubeSystemList returns a fake kube system
+func KubeSystemList(c echo.Context) error {
+	data, err := ReadFile("kubeSystemConfig.json")
+	if err != nil {
+		return err
+	}
+
+	return c.JSONBlob(http.StatusOK, data)
+}
+
 // Root Route Handler
 func RootHandler(c echo.Context) error {
-	var data map[string]interface{}
-	err := json.Unmarshal(embedGet("root.json"), &data)
-	if err != nil {
-		c.Logger().Print(err)
-	}
-	return c.JSON(http.StatusOK, data)
+	return getJsonResponse(c, "root.json")
 }
-// Pods Handler for default routes etc..Just returns blank
-func PodsHandler(c echo.Context) error {
-	var data map[string]interface{}
-	err := json.Unmarshal(embedGet("empty_list.json"), &data)
-	if err != nil {
-		c.Logger().Print(err)
-	}
-	return c.JSON(http.StatusOK, data)
+
+// EmptyListHandler returns the empty_list.json embedded file
+func EmptyListHandler(c echo.Context) error {
+	return getJsonResponse(c, "empty_list.json")
 }
+
 // Handler for any k8s resource like deployments etc.
 func ResourceHandler(c echo.Context) error {
 	json_map := make(map[string]interface{})
@@ -60,8 +69,9 @@ func ResourceHandler(c echo.Context) error {
 	}
 	return c.JSON(404, json_map)
 }
+
 //Pods Handler just returns a 201 and echo's back the post request
-func PostHandler(c echo.Context) error {
+func EchoPostHandler(c echo.Context) error {
 	json_map := make(map[string]interface{})
 	err := json.NewDecoder(c.Request().Body).Decode(&json_map)
 	c.Logger().Print(json_map)
@@ -70,6 +80,7 @@ func PostHandler(c echo.Context) error {
 	}
 	return c.JSON(201, json_map)
 }
+
 //Pods Handler
 func ServiceHandler(c echo.Context) error {
 	servicePathBase := "resource_dump/"

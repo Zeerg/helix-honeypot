@@ -1,16 +1,26 @@
 package handler
 
 import (
-	"net/http"
-	"fmt"
 	"bytes"
 	"compress/gzip"
 	"crypto/sha512"
+	"fmt"
+	"net/http"
 
+	openapi_v2 "github.com/google/gnostic/openapiv2"
 	"github.com/labstack/echo/v4"
 	"google.golang.org/protobuf/proto"
-	openapi_v2 "github.com/google/gnostic/openapiv2"
+
+	"helix-honeypot/config"
 )
+
+// Declare a global variable for the configuration
+var cfg *config.Config
+
+// Function to initialize the handler package with configuration
+func Initialize(c *config.Config) {
+	cfg = c
+}
 
 // Kubectl expects gzip usually....I really don't know
 func gzipHelper(data []byte) []byte {
@@ -20,13 +30,15 @@ func gzipHelper(data []byte) []byte {
 	zw.Close()
 	return buf.Bytes()
 }
+
 // Compute the ETAG.....no idea if this is needed
 func computeETag(data []byte) string {
 	return fmt.Sprintf("\"%X\"", sha512.Sum512(data))
 }
+
 // OpenAPI Handler just sends the swagger doc via proto
 func OpenApiHandler(c echo.Context) error {
-	openApiDoc, err := openapi_v2.ParseDocument(embedGet("v1.19.7_openapi.yaml"))
+	openApiDoc, err := openapi_v2.ParseDocument(embedGet(fmt.Sprintf("openapi/%s_openapi.json", cfg.K8SAPIVersion)))
 	if err != nil {
 		c.Logger().Print(err)
 	}

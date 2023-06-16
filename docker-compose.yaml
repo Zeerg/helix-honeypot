@@ -11,4 +11,4 @@ services:
   helix-honeypot:
     build: ./
     ports:
-      - "80:80"
+      - "8111:80"

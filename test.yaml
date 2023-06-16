@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example
+spec:
+  containers:
+    - name: busybox
+      image: busybox:1.25
+      volumeMounts:
+        - name: quobytevolume
+          mountPath: /persistent
+      command:
+        - /bin/sh
+        - -ec
+        - |
+          if [ -f /persistent/log ]; then
+            echo -n "Found old state starting at "; head -n1 /persistent/log
+          else
+            echo -n "Starting with a fresh state"
+          fi
+          while sleep 5; do date | tee -a /persistent/log; done
+  volumes:
+  - name: quobytevolume
+    quobyte:
+      registry: ignored:7861
+      volume: testVolume
+      readOnly: false
+      user: root
+      group: root

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 )
+
 // Embed the required files
 //go:embed embedded/*
 var embededFS embed.FS
