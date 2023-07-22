@@ -2,3 +2,4 @@
 bin/
 defaultConfig.json
 kubeSystemConfig.json
+config.toml

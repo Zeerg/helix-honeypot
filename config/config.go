@@ -3,79 +3,159 @@ package config
 import (
 	"fmt"
 	"os"
+	"io/ioutil"
 	"strings"
 
 	"helix-honeypot/model"
+	"github.com/BurntSushi/toml"
 )
 
-// If env vars are empty set a default
-func GetEnv(key, defaultValue string) string {
-	value := os.Getenv(key) // try to get the env var
-	if len(value) == 0 {
-		return defaultValue // if empty set default
-	}
-	return value // if not empty return env var
-}
-
 // GetEnvAsBool gets environment variables as boolean values. It returns false if the value is not "true" (case-insensitive), otherwise it returns true
-func GetEnvAsBool(key string, defaultValue bool) bool {
+func GetEnvAsBool(key string) bool {
 	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
 	return strings.ToLower(value) == "true"
 }
 
-func LoadHTTPConfig() model.HTTPConfig {
-	return model.HTTPConfig{
-		Host: GetEnv("HELIX_HOST", "localhost"), // Default value is localhost
-		Port: GetEnv("HELIX_PORT", "80"),        // Default value is 80
-	}
+func LoadK8SConfig(cfg *model.K8SConfig) model.K8SConfig {
+    apiVersion := os.Getenv("K8SAPI_VERSION")
+    ipBase := os.Getenv("IP_BASE")
+    host := os.Getenv("K8S_HOST")
+    port := os.Getenv("K8S_PORT")
+
+    if apiVersion != "" {
+        cfg.APIVersion = apiVersion
+    }
+    if ipBase != "" {
+        cfg.IPBase = ipBase
+    }
+    if host != "" {
+        cfg.Host = host
+    }
+    if port != "" {
+        cfg.Port = port
+    }
+
+    // Since the zero value for a boolean in Go is `false`, 
+    // we only need to check if the environment variable is "true".
+    if strings.ToLower(os.Getenv("GENERATE_KUBE_SYSTEM")) == "true" {
+        cfg.GenerateKubeSys = true
+    }
+    if strings.ToLower(os.Getenv("GENERATE_RANDOMNESS")) == "true" {
+        cfg.GenerateRand = true
+    }
+
+    return *cfg
 }
 
-func LoadUDPConfig() model.UDPConfig {
-	return model.UDPConfig{
-		Host: GetEnv("HELIX_UDP_HOST", "localhost"), // Default value is localhost
-		Port: GetEnv("HELIX_UDP_PORT", "53"),        // Default value is 80
-	}
+func LoadHTTPConfig(cfg *model.HTTPConfig) model.HTTPConfig {
+    host := os.Getenv("HELIX_HTTP_HOST")
+    port := os.Getenv("HELIX_HTTP_PORT")
+
+    if host != "" {
+        cfg.Host = host
+    }
+    if port != "" {
+        cfg.Port = port
+    }
+
+    return *cfg
 }
-func LoadTCPConfig() model.TCPConfig {
-	return model.TCPConfig{
-		Host: GetEnv("HELIX_TCP_HOST", "localhost"), // Default value is localhost
-		Port: GetEnv("HELIX_TCP_PORT", "443"),        // Default value is 80
-	}
+
+func LoadUDPConfig(cfg *model.UDPConfig) model.UDPConfig {
+    host := os.Getenv("HELIX_UDP_HOST")
+    port := os.Getenv("HELIX_UDP_PORT")
+
+    if host != "" {
+        cfg.Host = host
+    }
+    if port != "" {
+        cfg.Port = port
+    }
+
+    return *cfg
 }
-func LoadMongoDBConfig() model.MongoDBConfig {
-	username := GetEnv("MONGODB_USERNAME", "helix")
-	password := GetEnv("MONGODB_PASSWORD", "")
-	host := GetEnv("MONGODB_HOST", "")
-	database := GetEnv("MONGODB_DATABASE", "honeypot-data")
-	collection := GetEnv("MONGODB_COLLECTION", "k8s-data")
+
+func LoadTCPConfig(cfg *model.TCPConfig) model.TCPConfig {
+    host := os.Getenv("HELIX_TCP_HOST")
+    port := os.Getenv("HELIX_TCP_PORT")
+
+    if host != "" {
+        cfg.Host = host
+    }
+    if port != "" {
+        cfg.Port = port
+    }
+
+    return *cfg
+}
+
+func LoadMongoDBConfig(cfg *model.MongoDBConfig) model.MongoDBConfig {
+	username := os.Getenv("MONGODB_USERNAME")
+	password := os.Getenv("MONGODB_PASSWORD")
+	host := os.Getenv("MONGODB_HOST")
+	database := os.Getenv("MONGODB_DATABASE")
+	collection := os.Getenv("MONGODB_COLLECTION")
+
+	if username != "" {
+		cfg.Username = username
+	}
+	if password != "" {
+		cfg.Password = password
+	}
+	if host != "" {
+		cfg.Host = host
+	}
+	if database != "" {
+		cfg.Database = database
+	}
+	if collection != "" {
+		cfg.Collection = collection
+	}
 
 	// Format the MongoDB URI
-	uri := fmt.Sprintf("mongodb+srv://%s:%s@%s/", username, password, host)
+	uri := fmt.Sprintf("mongodb+srv://%s:%s@%s/", cfg.Username, cfg.Password, cfg.Host)
+	cfg.URI = uri
 
-	return model.MongoDBConfig{
-		Username:       username,
-		Password:       password,
-		Host:           host,
-		Database:       database,
-		Collection:     collection,
-		URI:            uri,
-		LogToMongoDB:   GetEnvAsBool("LOG_TO_MONGODB", false),
+	if strings.ToLower(os.Getenv("LOG_TO_MONGODB")) == "true" {
+		cfg.LogToMongoDB = true
 	}
+
+	return *cfg
 }
 
-func NewConfig() *model.Config {
-	return &model.Config{
-		HTTP:               LoadHTTPConfig(),
-		UDP:				LoadUDPConfig(),
-		TCP:				LoadTCPConfig(),
-		K8SAPIVersion:      GetEnv("K8SAPI_VERSION", "v1.19"), // Default value is v1.19
-		IPBase:             GetEnv("IP_BASE", "192.168"),      // Default value is 192.168
-		GenerateKubeSystem: GetEnvAsBool("GENERATE_KUBE_SYSTEM", true), // Default is true
-		GenerateRandomness: GetEnvAsBool("GENERATE_RANDOMNESS", true), // Default is true
-		MongoDB:            LoadMongoDBConfig(),
-		RunMode:            GetEnv("RUN_MODE", "k8s"), // Default value is "ad"
-	}
+func LoadRunModeConfig(cfg *model.RunModeConfig) model.RunModeConfig {
+    runMode := os.Getenv("RUN_MODE")
+    location := os.Getenv("HELIX_LOCATION")
+
+    if runMode != "" {
+        cfg.RunMode = runMode
+    }
+    if location != "" {
+        cfg.Location = location
+    }
+
+    return *cfg
+}
+
+func NewConfig(configFile string) (*model.Config, error) {
+    // Load default values from TOML file
+    var cfg model.Config
+    data, err := ioutil.ReadFile(configFile)
+    if err != nil {
+        return nil, err
+    }
+    _, err = toml.Decode(string(data), &cfg)
+    if err != nil {
+        return nil, err
+    }
+
+    // Override with environment variables
+    cfg.HTTP = LoadHTTPConfig(&cfg.HTTP)
+    cfg.UDP = LoadUDPConfig(&cfg.UDP)
+    cfg.TCP = LoadTCPConfig(&cfg.TCP)
+    cfg.K8S = LoadK8SConfig(&cfg.K8S)
+    cfg.MongoDB = LoadMongoDBConfig(&cfg.MongoDB)
+    cfg.RunMode = LoadRunModeConfig(&cfg.RunMode)
+
+    return &cfg, nil
 }

@@ -3,6 +3,7 @@ module helix-honeypot
 go 1.19
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/google/gnostic v0.6.9
 	github.com/google/uuid v1.3.0
