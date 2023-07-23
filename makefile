@@ -26,13 +26,13 @@ tidy:
 bins: download windows linux darwin
 
 windows: 
-		@env GOOS=windows GOARCH=amd64 go build -v -o bin/windows-helix -ldflags="-s -w"  main.go
+		@env GOOS=windows GOARCH=amd64 go build -v -o bin/windows-helix -ldflags="-s -w"  cmd/main.go
 
 linux: 
-		@env GOOS=linux GOARCH=amd64 go build -v -o bin/linux-helix -ldflags="-s -w"  main.go
+		@env GOOS=linux GOARCH=amd64 go build -v -o bin/linux-helix -ldflags="-s -w"  cmd/main.go
 
 darwin: 
-		@env GOOS=darwin GOARCH=amd64 go build -v -o bin/darwin-helix -ldflags="-s -w"  main.go
+		@env GOOS=darwin GOARCH=amd64 go build -v -o bin/darwin-helix -ldflags="-s -w"  cmd/main.go
 
 clean:
 		@rm -rf bin/

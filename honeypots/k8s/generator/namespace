@@ -1,0 +1,65 @@
+package generator
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+func GenerateNamespace(cfg *config.Config) map[string]interface{} {
+	namespace := fmt.Sprintf("namespace-%s", GeneratePodTemplateHash())
+	creationTimestamp := time.Now().Add(-time.Duration(rand.Intn(48)) * time.Hour) // Random time in last 48 hours
+	age := fmt.Sprintf("%dh", int(time.Since(creationTimestamp).Hours()))          // Age in hours
+	uuid := uuid.New().String()
+	namespaceTemplateHash := GeneratePodTemplateHash()
+
+	namespaceData := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Namespace",
+		"metadata": map[string]interface{}{
+			"name":              namespace,                                       // Namespace name
+			"creationTimestamp": creationTimestamp.Format("2006-01-02T15:04Z"), // Convert time to string in RFC3339 format, less precise
+			"deletionGracePeriodSeconds": 0,
+			"deletionTimestamp":          creationTimestamp.Format("2006-01-02T15:04Z"),
+			"finalizers":                 []string{"string"},
+			"generateName":               fmt.Sprintf("namespace-%s-", namespaceTemplateHash), // Generate name
+			"generation":                 0,
+			"labels": map[string]string{
+				"additionalProp1": "string",
+				"additionalProp2": "string",
+				"additionalProp3": "string",
+			},
+			"managedFields": []map[string]interface{}{
+				{
+					"apiVersion": "string",
+					"fieldsType": "string",
+					"fieldsV1":   struct{}{},
+					"manager":    "string",
+					"operation":  "string",
+					"subresource": "string",
+					"time":       creationTimestamp.Format("2006-01-02T15:04Z"),
+				},
+			},
+			"ownerReferences": []map[string]interface{}{
+				{
+					"apiVersion":         "string",
+					"blockOwnerDeletion": true,
+					"controller":         true,
+					"kind":               "string",
+					"name":               "string",
+					"uid":                "string",
+				},
+			},
+			"resourceVersion": "string",
+			"selfLink":        "string",
+			"uid":             uuid,
+		},
+		"status": map[string]interface{}{
+			"phase": "string",
+		},
+	}
+
+	return namespaceData
+}
