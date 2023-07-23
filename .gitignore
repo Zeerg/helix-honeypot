@@ -1,2 +1,5 @@
 .DS_Store
 bin/
+defaultConfig.json
+kubeSystemConfig.json
+config.toml

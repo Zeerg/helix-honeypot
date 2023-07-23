@@ -2,3 +2,4 @@ images*
 Dockerfile
 docker-compose.yaml
 .git
+config.toml
