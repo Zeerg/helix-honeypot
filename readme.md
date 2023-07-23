@@ -32,15 +32,75 @@ To use Helix, follow these steps:
 
 The behavior of Helix honeypot can be adjusted through environment variables or a TOML configuration file. 
 
-Here are the configuration options:
+Here are the configuration options that Helix provides:
 
-- **runMode**: The mode in which Helix runs. Options are `"k8s"`, `"http"`, `"udp"`, `"tcp"`, `"ad"`.
-- **location**: The location of the Helix server.
-- **K8S**: The settings for the Kubernetes honeypot. Includes `apiVersion`, `ipBase`, `generateKubeSys`, `generateRand`, `host`, `port`, `tokenValues`, and `tokenNames`.
-- **HTTP**: The settings for the HTTP honeypot. Includes `host` and `port`.
-- **UDP**: The settings for the UDP honeypot. Includes `host` and `port`.
-- **TCP**: The settings for the TCP honeypot. Includes `host` and `port`.
-- **MongoDB**: The settings for MongoDB logging. Includes `username`, `password`, `host`, `database`, `collection`, `uri`, and `logToMongoDB`.
+- **runMode**: This option allows you to set the mode in which Helix runs. Options are as follows:
+
+  - `"k8s"`: In this mode, Helix mimics a Kubernetes environment, including API responses. This mode is useful for detecting and studying attacks that target Kubernetes clusters. 
+
+  - `"http"`: In this mode, Helix operates as an HTTP server and responds to incoming HTTP requests. This mode can be used to attract and study various types of HTTP-based attacks, including web scraping, SQL injections, and Cross-Site Scripting (XSS).
+
+  - `"udp"`: In this mode, Helix acts as a UDP server, listening for and responding to incoming UDP packets. This mode can be useful for detecting UDP-based attacks such as UDP flood attacks.
+
+  - `"tcp"`: In this mode, Helix acts as a TCP server, listening for and responding to incoming TCP connections. This mode can be useful for detecting TCP-based attacks such as TCP SYN flood attacks.
+
+  - `"def"`: This is active defense mode. It randomly selects between streaming random data back or an infinite redirect.
+
+- **location**: This option allows you to specify the location of the Helix server as a string. This could be a physical location, a virtual location, or a network location, depending on your setup and requirements.
+
+- **K8S**: This set of options allows you to configure the settings for the Kubernetes honeypot. These settings include the following:
+
+  - `apiVersion`: This option allows you to specify the API version that the Kubernetes honeypot should mimic.
+  
+  - `ipBase`: This option allows you to specify the base IP address for the Kubernetes honeypot.
+  
+  - `generateKubeSys`: This option allows you to control whether or not the Kubernetes honeypot should generate Kubernetes system namespaces.
+  
+  - `generateRand`: This option allows you to control whether or not the Kubernetes honeypot should generate random resources.
+  
+  - `host`: This option allows you to specify the host for the Kubernetes honeypot.
+  
+  - `port`: This option allows you to specify the port for the Kubernetes honeypot.
+  
+  - `tokenValues`: This option allows you to specify the honeytoken values for the Kubernetes honeypot.
+  
+  - `tokenNames`: This option allows you to specify the honeytoken names for the Kubernetes honeypot.
+
+- **HTTP**: This set of options allows you to configure the settings for the HTTP honeypot. These settings include the following:
+
+  - `host`: This option allows you to specify the host for the HTTP honeypot.
+  
+  - `port`: This option allows you to specify the port for the HTTP honeypot.
+
+- **UDP**: This set of options allows you to configure the settings for the UDP honeypot. These settings include the following:
+
+  - `host`: This option allows you to specify the host for the UDP honeypot.
+  
+  - `port`: This option allows you to specify the port for the UDP honeypot.
+
+- **TCP**: This set of options allows you to configure the settings for the TCP honeypot. These settings include the following:
+
+  - `host`: This option allows you to specify the host for the TCP honeypot.
+  
+  - `port`: This option allows you to specify the port for the TCP honeypot.
+
+- **MongoDB**: This set of options allows you to configure the settings for MongoDB logging. These settings include the following:
+
+  - `username`: This option allows you to specify the username for MongoDB.
+  
+  - `password`: This option allows you to specify the password for MongoDB.
+  
+  - `host`: This option allows you to specify the host for MongoDB.
+  
+  - `database`: This option allows you to specify the database for MongoDB.
+  
+  - `collection`: This option allows you to specify the collection for MongoDB.
+  
+  - `uri`: This option allows you to specify the URI for MongoDB.
+  
+  - `logToMongoDB`: This option allows you to control whether or not Helix should log events to MongoDB.
+
+Please refer to the example configuration files provided in the repository for further details on how to set these options.
 
 ### TOML Configuration
 
@@ -88,7 +148,58 @@ To test Helix locally, follow these steps:
 Clone this repository.
 Run docker-compose up -d to start Helix as a Docker container.
 
-### Deployment
+```
+version: '3.7'
 
-You can deploy Helix using Docker by running the following command:
-docker run -d -p 80:80 helixhoneypot/helixhoneypot
+services:
+  helix-honeypot-k8s:
+    build: ./
+    ports:
+      - "8111:8111"
+    environment:
+      - RUN_MODE=k8s
+      - HELIX_LOCATION=testing
+      - K8SAPI_VERSION=v1.21
+      - IP_BASE=192.168
+      - GENERATE_KUBE_SYSTEM=true
+      - GENERATE_RANDOMNESS=true
+      - K8S_HOST=0.0.0.0
+      - K8S_PORT=8111
+
+  helix-honeypot-http:
+    build: ./
+    ports:
+      - "8000:8000"
+    environment:
+      - RUN_MODE=http
+      - HELIX_HTTP_HOST=0.0.0.0
+      - HELIX_HTTP_PORT=8000
+
+  helix-honeypot-tcp:
+    build: ./
+    ports:
+      - "3000:3000"
+    environment:
+      - RUN_MODE=tcp
+      - HELIX_TCP_HOST=0.0.0.0
+      - HELIX_TCP_PORT=3000
+
+  helix-honeypot-udp:
+    build: ./
+    ports:
+      - "53:53/udp"
+    environment:
+      - RUN_MODE=udp
+      - HELIX_UDP_HOST=0.0.0.0
+      - HELIX_UDP_PORT=53
+
+  helix-honeypot-def:
+    build: ./
+    ports:
+      - "8001:8001"
+    environment:
+      - RUN_MODE=def
+      - HELIX_DEF_HOST=0.0.0.0
+      - HELIX_DEF_PORT=8001
+
+```
