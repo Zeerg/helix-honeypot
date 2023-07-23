@@ -1,14 +1,53 @@
 version: '3.7'
 
 services:
-  helix-honeypot-ad:
-   build: ./
-   ports:
-     - "8000:80"
-   entrypoint: [/helix-honeypot]
-   volumes:
-     - /dev/urandom:/dev/urandom
-  helix-honeypot:
+  helix-honeypot-k8s:
     build: ./
     ports:
-      - "8111:80"
+      - "8111:8111"
+    environment:
+      - RUN_MODE=k8s
+      - HELIX_LOCATION=testing
+      - K8SAPI_VERSION=v1.21
+      - IP_BASE=192.168
+      - GENERATE_KUBE_SYSTEM=true
+      - GENERATE_RANDOMNESS=true
+      - K8S_HOST=0.0.0.0
+      - K8S_PORT=8111
+
+  helix-honeypot-http:
+    build: ./
+    ports:
+      - "8000:8000"
+    environment:
+      - RUN_MODE=http
+      - HELIX_HTTP_HOST=0.0.0.0
+      - HELIX_HTTP_PORT=8000
+
+  helix-honeypot-tcp:
+    build: ./
+    ports:
+      - "3000:3000"
+    environment:
+      - RUN_MODE=tcp
+      - HELIX_TCP_HOST=0.0.0.0
+      - HELIX_TCP_PORT=3000
+
+  helix-honeypot-udp:
+    build: ./
+    ports:
+      - "53:53/udp"
+    environment:
+      - RUN_MODE=udp
+      - HELIX_UDP_HOST=0.0.0.0
+      - HELIX_UDP_PORT=53
+
+  helix-honeypot-def:
+    build: ./
+    ports:
+      - "8001:8001"
+    environment:
+      - RUN_MODE=def
+      - HELIX_DEF_HOST=0.0.0.0
+      - HELIX_DEF_PORT=8001
+

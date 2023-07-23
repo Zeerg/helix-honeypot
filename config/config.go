@@ -89,6 +89,20 @@ func LoadTCPConfig(cfg *model.TCPConfig) model.TCPConfig {
     return *cfg
 }
 
+func LoadDEFConfig(cfg *model.DEFConfig) model.DEFConfig {
+    host := os.Getenv("HELIX_DEF_HOST")
+    port := os.Getenv("HELIX_DEF_PORT")
+
+    if host != "" {
+        cfg.Host = host
+    }
+    if port != "" {
+        cfg.Port = port
+    }
+
+    return *cfg
+}
+
 func LoadMongoDBConfig(cfg *model.MongoDBConfig) model.MongoDBConfig {
 	username := os.Getenv("MONGODB_USERNAME")
 	password := os.Getenv("MONGODB_PASSWORD")
@@ -138,15 +152,19 @@ func LoadRunModeConfig(cfg *model.RunModeConfig) model.RunModeConfig {
 }
 
 func NewConfig(configFile string) (*model.Config, error) {
-    // Load default values from TOML file
     var cfg model.Config
-    data, err := ioutil.ReadFile(configFile)
-    if err != nil {
-        return nil, err
-    }
-    _, err = toml.Decode(string(data), &cfg)
-    if err != nil {
-        return nil, err
+    
+    // Check if the config file exists
+    if _, err := os.Stat(configFile); err == nil {
+        // If the config file exists, load default values from TOML file
+        data, err := ioutil.ReadFile(configFile)
+        if err != nil {
+            return nil, err
+        }
+        _, err = toml.Decode(string(data), &cfg)
+        if err != nil {
+            return nil, err
+        }
     }
 
     // Override with environment variables
@@ -154,6 +172,7 @@ func NewConfig(configFile string) (*model.Config, error) {
     cfg.UDP = LoadUDPConfig(&cfg.UDP)
     cfg.TCP = LoadTCPConfig(&cfg.TCP)
     cfg.K8S = LoadK8SConfig(&cfg.K8S)
+    cfg.DEF = LoadDEFConfig(&cfg.DEF)
     cfg.MongoDB = LoadMongoDBConfig(&cfg.MongoDB)
     cfg.RunMode = LoadRunModeConfig(&cfg.RunMode)
 
