@@ -1,3 +1,5 @@
+# Helix Honeypot
+
 <p align="center"> 
   <img src="images/cover.png" width="650" title="Helix" align="center">
 </p>
@@ -5,8 +7,6 @@
 ---
 
 [![Docker Image CI](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml)
-
-# Helix Honeypot
 
 Helix is a versatile honeypot designed to mimic the behavior of various protocols including Kubernetes API server, HTTP, TCP, and UDP, serving as an active defense mechanism. Its primary goal is to detect malicious activities targeting infrastructure across different protocols without running a full-scale implementation. Helix provides the flexibility of deploying a customized honeypot that meets the specific requirements of your environment, thereby enhancing your ability to detect and mitigate threats.
 
