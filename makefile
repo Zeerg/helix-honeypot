@@ -1,39 +1,28 @@
-.PHONY: help build push tidy run bins windows linux darwin
+.PHONY: help build run tidy docker clean
+
+GO ?= go
+IMAGE ?= helix-honeypot:local
 
 help:
-	    @echo "Makefile commands:"
-	    @echo ""
-		@echo "run - Go Run main"
-		@echo "tidy - Go Mody Tidy"
-		@echo "windows - Build windows binary"
-		@echo "linux - Build linux binary"
-		@echo "darwin - Build mac binary"
-		@echo "bins - Make all the bins"
-		@echo "clean - Clean the build dir"
-	    @echo ""
+	@printf '%s\n' \
+	  'build  Build the local binary' \
+	  'run    Run the Kubernetes honeypot' \
+	  'tidy   Reconcile Go module metadata' \
+	  'docker Build the container image' \
+	  'clean  Remove local build output'
 
-.DEFAULT_GOAL := build-docker
+build:
+	mkdir -p bin
+	$(GO) build -trimpath -o bin/helix-honeypot ./cmd
 
 run:
-		@go run main.go
-
-download:
-		@go mod download
+	$(GO) run ./cmd
 
 tidy:
-		@go mod tidy
+	$(GO) mod tidy
 
-bins: download windows linux darwin
-
-windows: 
-		@env GOOS=windows GOARCH=amd64 go build -v -o bin/windows-helix -ldflags="-s -w"  cmd/main.go
-
-linux: 
-		@env GOOS=linux GOARCH=amd64 go build -v -o bin/linux-helix -ldflags="-s -w"  cmd/main.go
-
-darwin: 
-		@env GOOS=darwin GOARCH=amd64 go build -v -o bin/darwin-helix -ldflags="-s -w"  cmd/main.go
+docker:
+	docker build --tag $(IMAGE) .
 
 clean:
-		@rm -rf bin/
-	
+	rm -rf bin

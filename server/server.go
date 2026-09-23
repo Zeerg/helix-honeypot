@@ -1,42 +1,53 @@
 package server
 
 import (
-	"log"
+	"context"
+	"fmt"
 
 	"helix-honeypot/config"
+	httpMode "helix-honeypot/honeypots/http"
 	"helix-honeypot/honeypots/k8s"
-	"helix-honeypot/honeypots/defense"
-	"helix-honeypot/honeypots/udp"
+	"helix-honeypot/honeypots/kubelet"
 	"helix-honeypot/honeypots/tcp"
-	"helix-honeypot/honeypots/http"
+	"helix-honeypot/honeypots/udp"
 )
 
-// StartServer starts the honeypot server.
-func StartHoneypot() error {
-	// Initialize Config
-	cfg, err := config.NewConfig("./config.toml")
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+// StartHoneypot loads and validates configuration, then runs exactly one
+// supported honeypot mode until it returns or ctx is cancelled.
+func StartHoneypot(ctx context.Context) error {
+	if ctx == nil {
+		return fmt.Errorf("start honeypot: context must not be nil")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
-	// Generate Machine ID
-	machineId, err := config.MakeMachineId()
+	cfg, err := config.NewConfig("")
 	if err != nil {
-		log.Fatal("Failed to generate machine ID: ", err)
+		return fmt.Errorf("load configuration: %w", err)
 	}
-	cfg.MachineID = machineId
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
-	// Run the configured honeypot
-	if cfg.RunMode.RunMode == "k8s" {
-		k8s.StartK8SHoneypot(cfg)
-	} else if cfg.RunMode.RunMode == "def" {
-		defense.StartDefenseHoneypot(cfg)
-	} else if cfg.RunMode.RunMode == "udp" {
-		udp.StartUDPHoneypot(cfg)
-	} else if cfg.RunMode.RunMode == "tcp" {
-		tcp.StartTCPHoneypot(cfg)
-	} else if cfg.RunMode.RunMode == "http" {
-		http.StartHTTPHoneypot(cfg)
+	switch cfg.RunMode.RunMode {
+	case "k8s":
+		err = k8s.StartK8SHoneypot(ctx, cfg)
+	case "http":
+		err = httpMode.StartHTTPHoneypot(ctx, cfg)
+	case "tcp":
+		err = tcp.StartTCPHoneypot(ctx, cfg)
+	case "udp":
+		err = udp.StartUDPHoneypot(ctx, cfg)
+	case "kubelet":
+		err = kubelet.StartKubeletHoneypot(ctx, cfg)
+	default:
+		// Validate also protects callers constructing a configuration through a
+		// different path, keeping the dispatcher closed over these four modes.
+		return fmt.Errorf("unsupported run mode %q", cfg.RunMode.RunMode)
 	}
-	return err
+	if err != nil {
+		return fmt.Errorf("%s honeypot: %w", cfg.RunMode.RunMode, err)
+	}
+	return nil
 }

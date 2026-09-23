@@ -1,205 +1,141 @@
 # Helix Honeypot
 
-<p align="center"> 
-  <img src="images/cover.png" width="650" title="Helix" align="center">
-</p>
+Helix is a small honeypot for Kubernetes API reconnaissance, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes one structured event per interaction to standard output.
 
----
+Kubernetes and HTTP modes return bounded simulated responses. TCP and UDP modes record connection/datagram metadata and byte counts, but do not reply to the sender.
 
-[![Docker Image CI](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Zeerg/helix-honeypot/actions/workflows/docker-image.yml)
+The Kubernetes API façade is the main product surface. It is useful for detecting and studying clients that probe exposed control planes; it is not a Kubernetes control plane, a conformance server, or a place to run workloads.
 
-Helix is a versatile honeypot designed to mimic the behavior of various protocols including Kubernetes API server, HTTP, TCP, and UDP, serving as an active defense mechanism. Its primary goal is to detect malicious activities targeting infrastructure across different protocols without running a full-scale implementation. Helix provides the flexibility of deploying a customized honeypot that meets the specific requirements of your environment, thereby enhancing your ability to detect and mitigate threats.
+## Safety boundary
 
-## Features
+- Helix never connects to or changes a real Kubernetes cluster.
+- The default listeners bind to loopback and unprivileged ports.
+- Request bodies, query strings, authorization and cookie values, and configured honeytoken values are not written to event logs. User-agent collection is opt-in.
+- The container runs as an unprivileged user with a read-only filesystem and no Linux capabilities. The Compose bridge disables sensor-to-sensor communication and outbound IP masquerading, while publishing sensor ports on loopback. These bridge settings do not enforce a complete outbound traffic block; apply an egress-deny firewall rule at the host or cloud network boundary when that guarantee is required.
+- Do not put real credentials or production data in a honeypot. Deploy public sensors in a dedicated, restricted network and review the event privacy settings before collection.
 
-- **Multi-Protocol Emulation**: Helix emulates the behavior of various protocols including Kubernetes API server, HTTP, TCP, and UDP. It can run in either API mode, providing expected responses to various API endpoints, or in Active Defense (AD) mode, generating never-ending responses to disrupt and confuse network crawlers.
-- **Kubernetes API Emulation**: In Kubernetes mode, Helix mimics a Kubernetes API server, providing responses to various API endpoints and generating random Kubernetes resources such as pods, namespaces, ingress, and secrets.
-- **HTTP, TCP, and UDP Emulation**: Helix can also run as a simple HTTP, TCP, or UDP server, providing basic responses to requests and serving as a general-purpose honeypot for these protocols.
-- **Logging and Analysis**: Helix logs all requests across all supported protocols. It can store these logs in a MongoDB database for further analysis and monitoring, providing insights into attempted attacks and helping to identify patterns and trends.
-- **Randomness Generation**: In Kubernetes mode, Helix has the ability to generate random Kubernetes resources, adding to the realism of the honeypot and helping to deceive attackers.
-- **Flexible Configuration**: Helix can be configured using environment variables or a TOML configuration file. This allows for easy customization of the honeypot's behavior and deployment in a variety of environments.
+Helix is designed to observe and safely emulate. It does not stream unbounded responses, create redirect loops, execute submitted objects, or attempt to disrupt remote scanners.
 
+## Quick start
 
-## Usage
+Start the Kubernetes sensor. Its published port is available only on the local machine:
 
-To use Helix, follow these steps:
+```sh
+docker compose up --build -d
+docker compose logs -f k8s
+```
 
-1. Clone this repository.
-2. Configure the environment variables or the TOML configuration file according to your requirements (see "Configuration" section below).
-3. Run Helix using Docker or directly on your machine.
+Probe the simulated Kubernetes API and its health endpoints:
+
+```sh
+curl http://127.0.0.1:8080/version
+curl http://127.0.0.1:8080/readyz
+```
+
+Start all four sensor modes when needed:
+
+```sh
+docker compose --profile all up --build -d
+```
+
+Stop the sensors with `docker compose down`.
+
+To load structured settings and honeytokens into the Kubernetes container, copy `config.example.toml` to the ignored local `config.toml`, edit it with synthetic values, then start the optional config overlay:
+
+```sh
+cp config.example.toml config.toml
+docker compose -f docker-compose.yaml -f docker-compose.config.yaml up --build -d k8s
+```
+
+The overlay mounts the file read-only. `HELIX_CONFIG_FILE` can point to a different host path. Host-published ports can be changed with `HELIX_K8S_PUBLISHED_PORT`, `HELIX_HTTP_PUBLISHED_PORT`, `HELIX_TCP_PUBLISHED_PORT`, and `HELIX_UDP_PUBLISHED_PORT`; they bind to `127.0.0.1` unless `HELIX_PUBLISH_HOST` is deliberately changed.
+
+The image also works without Compose. It ships `config.docker.toml` baked in at `/etc/helix/config.toml`, which binds every sensor to `0.0.0.0` and seeds the `payments` and `monitoring` namespaces plus a synthetic honeytoken Secret, so a pulled image is immediately reachable and looks inhabited:
+
+```sh
+docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/zeerg/helix-honeypot:latest
+curl http://127.0.0.1:8080/version
+```
+
+(`latest` tracks `main`, `edge` tracks `develop`, and `v*` releases get semver tags; use `helix-honeypot:local` for a local `docker build`.)
+
+Override the baked file by bind-mounting over `/etc/helix/config.toml` or setting `HELIX_CONFIG`; environment variables still take precedence. The bare binary keeps loopback-only defaults — the `0.0.0.0` binds exist only in the container image, where published ports are the operator's explicit choice.
+
+To run directly with Go, the default mode is Kubernetes:
+
+```sh
+go run ./cmd
+```
+
+Set `HELIX_RUN_MODE` to `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
 
 ## Configuration
 
-The behavior of Helix honeypot can be adjusted through environment variables or a TOML configuration file. 
+The optional TOML file is `./config.toml`; set `HELIX_CONFIG` to use a different path. Environment values override file values. If no file exists, Helix starts with safe defaults.
 
-Here are the configuration options that Helix provides:
+Start from the checked-in example with `cp config.example.toml config.toml` and edit the values for the lab.
 
-- **runMode**: This option allows you to set the mode in which Helix runs. Options are as follows:
+| Setting | Environment variable | Default |
+| --- | --- | --- |
+| Sensor mode | `HELIX_RUN_MODE` (`RUN_MODE` is also accepted) | `k8s` |
+| Kubernetes bind address | `HELIX_K8S_HOST` | `127.0.0.1` |
+| Kubernetes port | `HELIX_K8S_PORT` | `8080` |
+| Kubernetes API profile | `HELIX_K8S_API_VERSION` | `v1.37` |
+| Kubernetes pod network base | `HELIX_K8S_IP_BASE` (`IP_BASE`) | `10.42.0.0` |
+| Additional Kubernetes namespaces | `HELIX_K8S_NAMESPACES` (comma-separated) | built-ins only |
+| Synthetic Secret lures | `HELIX_K8S_HONEYTOKENS` (`name[@ns]:k=v,k=v` entries, `;`-separated) | none |
+| HTTP bind address / port | `HELIX_HTTP_HOST`, `HELIX_HTTP_PORT` | `127.0.0.1`, `8081` |
+| TCP bind address / port | `HELIX_TCP_HOST`, `HELIX_TCP_PORT` | `127.0.0.1`, `9022` |
+| UDP bind address / port | `HELIX_UDP_HOST`, `HELIX_UDP_PORT` | `127.0.0.1`, `9053` |
+| Kubelet bind address / port | `HELIX_KUBELET_HOST`, `HELIX_KUBELET_PORT` | `127.0.0.1`, `10250` |
+| Kubelet node name | `HELIX_KUBELET_NODE_NAME` | `worker-01` |
+| Event format | `HELIX_LOG_FORMAT` | `json` |
+| Include user-agent in events | `HELIX_LOG_INCLUDE_USER_AGENT` | `false` |
+| Trusted proxy CIDRs | `HELIX_LOG_TRUSTED_PROXY_CIDRS` (comma-separated) | none |
+| File event sink | `HELIX_LOG_FILE` (container: mount a writable volume, e.g. `-v $PWD/logs:/logs` + `/logs/events.jsonl`) | none |
+| Splunk HEC sink | `HELIX_SPLUNK_URL`, `HELIX_SPLUNK_TOKEN`, `HELIX_SPLUNK_INDEX`, `HELIX_SPLUNK_SOURCETYPE`, `HELIX_SPLUNK_SOURCE` | none |
+| Elasticsearch sink | `HELIX_ELASTICSEARCH_URL` (or `HELIX_ELK_URL`), `HELIX_ELASTICSEARCH_INDEX`, `HELIX_ELASTICSEARCH_TOKEN`, `HELIX_ELASTICSEARCH_USERNAME`, `HELIX_ELASTICSEARCH_PASSWORD` | none |
+| Generic HTTP sink | `HELIX_HTTP_SINK_URL`, `HELIX_HTTP_SINK_TOKEN`, `HELIX_HTTP_SINK_HEADERS` (`Name:Value` entries, `;`-separated) | none |
 
-  - `"k8s"`: In this mode, Helix mimics a Kubernetes environment, including API responses. This mode is useful for detecting and studying attacks that target Kubernetes clusters. 
+Structured synthetic Kubernetes Secrets are configured in TOML with `[[k8s.honeytokens]]` entries containing `name`, optional `namespace`, optional `type` (defaults to `Opaque`), and a `data` map. They can also come entirely from the environment: `HELIX_K8S_HONEYTOKENS="api-token@payments:token=x1,user=admin;db-creds:password=x2"` creates two `Opaque` Secrets — `api-token` in `payments`, `db-creds` in `default`. Values with commas or semicolons need TOML. The built-in namespaces are `default`, `kube-system`, `kube-public`, and `kube-node-lease`; names in `k8s.namespaces` or `HELIX_K8S_NAMESPACES` add custom namespaces. A honeytoken can use a built-in namespace or a custom namespace listed in configuration. The legacy `token_names` and `token_values` fields and the `HELIX_K8S_TOKEN_NAMES` / `HELIX_K8S_TOKEN_VALUES` comma-separated environment variables remain supported for older deployments. Kubernetes resource generation uses `HELIX_K8S_GENERATE_KUBE_SYSTEM` and `HELIX_K8S_GENERATE_RANDOMNESS`.
 
-  - `"http"`: In this mode, Helix operates as an HTTP server and responds to incoming HTTP requests. This mode can be used to attract and study various types of HTTP-based attacks, including web scraping, SQL injections, and Cross-Site Scripting (XSS).
+Use synthetic-only honeytoken data. The config file is limited to 1 MiB. Namespace lists may contain at most 64 lowercase DNS labels, each at most 63 bytes. Structured honeytokens are limited to 64 entries, 16 data keys per entry, and 256 data keys total; each honeytoken needs at least one data key. Honeytoken names are lowercase DNS subdomains; types are `Opaque` or a lowercase DNS domain/name string up to 256 bytes; data keys use Kubernetes Secret key characters and are limited to 253 bytes. Each structured data value is limited to 4 KiB, and structured plus legacy token payloads together are limited to 16 KiB. Legacy token lists allow at most 64 entries each, with entries up to 256 bytes; legacy names and values together are capped at 16 KiB.
 
-  - `"udp"`: In this mode, Helix acts as a UDP server, listening for and responding to incoming UDP packets. This mode can be useful for detecting UDP-based attacks such as UDP flood attacks.
+Event logging defaults to JSON. User-agent collection is off by default, and the trusted proxy list is empty, so forwarded client-address headers are not trusted unless their proxy CIDRs are configured. Set `HELIX_LOG_FORMAT` to `text` for key-value text output. Use `HELIX_LOG_TRUSTED_PROXY_CIDRS` only for networks that contain proxies you control; up to 16 valid CIDRs are accepted. The direct socket peer is always retained separately from a client address derived from a trusted X-Forwarded-For chain.
 
-  - `"tcp"`: In this mode, Helix acts as a TCP server, listening for and responding to incoming TCP connections. This mode can be useful for detecting TCP-based attacks such as TCP SYN flood attacks.
+Bind hosts must be literal IPv4 or IPv6 addresses; hostnames are rejected so starting a sensor cannot trigger DNS lookups. Use `0.0.0.0` only when the listener should accept connections on every container interface.
 
-  - `"def"`: This is active defense mode. It randomly selects between streaming random data back or an infinite redirect.
+Container listeners bind inside the container, while Compose publishes ports on `127.0.0.1`. Change the host-side mapping deliberately if another machine needs access. Keep any public deployment behind network controls and resource limits.
 
-- **location**: This option allows you to specify the location of the Helix server as a string. This could be a physical location, a virtual location, or a network location, depending on your setup and requirements.
+## Events
 
-- **K8S**: This set of options allows you to configure the settings for the Kubernetes honeypot. These settings include the following:
+Events are one-line structured records written to stdout, so Docker, systemd, or a container platform can collect them without a database. JSON Lines is the default; key-value text is optional. Events include a UTC timestamp, event ID, sensor, peer address, and bounded protocol metadata such as HTTP method, sanitized request path, status, and byte counts. Query strings and payloads are omitted because they commonly carry credentials or personal data. Configured honeytoken values and common encodings are redacted from HTTP methods, paths, and opt-in user-agent fields; ambiguous or deeply encoded user-agent values are omitted. HTTP body counting is capped at 64 KiB and discards the bytes after counting them. A client address is added only when the connection came through a configured trusted proxy.
 
-  - `apiVersion`: This option allows you to specify the API version that the Kubernetes honeypot should mimic.
-  
-  - `ipBase`: This option allows you to specify the base IP address for the Kubernetes honeypot.
-  
-  - `generateKubeSys`: This option allows you to control whether or not the Kubernetes honeypot should generate Kubernetes system namespaces.
-  
-  - `generateRand`: This option allows you to control whether or not the Kubernetes honeypot should generate random resources.
-  
-  - `host`: This option allows you to specify the host for the Kubernetes honeypot.
-  
-  - `port`: This option allows you to specify the port for the Kubernetes honeypot.
-  
-  - `tokenValues`: This option allows you to specify the honeytoken values for the Kubernetes honeypot.
-  
-  - `tokenNames`: This option allows you to specify the honeytoken names for the Kubernetes honeypot.
+One sink of each type can be enabled purely from the environment — `docker run -e HELIX_SPLUNK_URL=... -e HELIX_SPLUNK_TOKEN=...` needs no TOML file at all. Setting the anchor variable (`*_URL` or `HELIX_LOG_FILE`) appends that sink; use TOML for multiple sinks of one type or custom header maps.
 
-- **HTTP**: This set of options allows you to configure the settings for the HTTP honeypot. These settings include the following:
+`[[logging.sinks]]` entries fan the same sanitized events out to external collectors. Supported sink types are `file` (append-only JSON Lines), `splunk` (HTTP Event Collector; a bare base URL gets `/services/collector/event` appended), `elasticsearch`/`elk` (the `_bulk` NDJSON API, requiring an `index`; authenticate with `token` as an API key or `username`/`password` as basic auth), and `http` (a generic NDJSON webhook with optional static `headers` or a Bearer `token`). Up to 8 sinks are allowed. Remote sinks batch events asynchronously — up to 64 events or 256 KiB per batch, flushed every second — and drop rather than block when the destination or the queue cannot keep up. Deliveries accept `http` and `https` endpoints, keep TLS certificate verification enabled, never follow redirects, and send at most two attempts per batch. Sink tokens, passwords, and header values are added to the event redaction set so credentials cannot appear in shipped records.
 
-  - `host`: This option allows you to specify the host for the HTTP honeypot.
-  
-  - `port`: This option allows you to specify the port for the HTTP honeypot.
+## Kubelet mode
 
-- **UDP**: This set of options allows you to configure the settings for the UDP honeypot. These settings include the following:
+`HELIX_RUN_MODE=kubelet` emulates a kubelet with anonymous read access — the misconfiguration that makes real nodes worth scanning. `/pods` and `/runningpods` return a static workload list for the configured `node_name`, and `/healthz`, `/metrics`, `/metrics/cadvisor`, `/stats/summary`, `/configz`, `/logs/`, and `/containerLogs/<ns>/<pod>/<container>` return bounded plausible data. Streaming endpoints (`/exec`, `/attach`, `/portforward`, `/run`, `/cri`) always refuse with a kubelet-style upgrade error; the attempt is still recorded as an event.
 
-  - `host`: This option allows you to specify the host for the UDP honeypot.
-  
-  - `port`: This option allows you to specify the port for the UDP honeypot.
+## Kubernetes API profile
 
-- **TCP**: This set of options allows you to configure the settings for the TCP honeypot. These settings include the following:
+Helix defaults to the Kubernetes `v1.37` discovery and version profile and accepts simulated profiles from `v1.19` through `v1.37`. It is a bounded emulator, not a Kubernetes control plane or conformance server. Its in-memory object store is limited to 4,096 objects, 32 MiB total, and 256 KiB per object. List pages contain at most 100 objects and 1 MiB; concurrent list work and watches are capped. Watch replay, bookmarks, and full Kubernetes schema fidelity are not modeled.
 
-  - `host`: This option allows you to specify the host for the TCP honeypot.
-  
-  - `port`: This option allows you to specify the port for the TCP honeypot.
+The repository contains compressed OpenAPI v2 snapshots through `v1.27`; those are served only for their matching profiles. OpenAPI v3 and a current `v1.37` schema are not modeled yet, so clients requesting them receive a Kubernetes-style `NotFound` response rather than a stale schema presented as current.
 
-- **MongoDB**: This set of options allows you to configure the settings for MongoDB logging. These settings include the following:
+## Development
 
-  - `username`: This option allows you to specify the username for MongoDB.
-  
-  - `password`: This option allows you to specify the password for MongoDB.
-  
-  - `host`: This option allows you to specify the host for MongoDB.
-  
-  - `database`: This option allows you to specify the database for MongoDB.
-  
-  - `collection`: This option allows you to specify the collection for MongoDB.
-  
-  - `uri`: This option allows you to specify the URI for MongoDB.
-  
-  - `logToMongoDB`: This option allows you to control whether or not Helix should log events to MongoDB.
+Use Go 1.27 or newer:
 
-Please refer to the example configuration files provided in the repository for further details on how to set these options.
-
-### TOML Configuration
-
-You can also provide a TOML configuration file (`config.toml`) with the following structure:
-
-```toml
-runMode = "k8s"
-location = "your_location"
-
-[K8S]
-apiVersion = "v1.19"
-ipBase = "192.168"
-generateKubeSys = true
-generateRand = true
-host = "localhost"
-port = "8111"
-tokenValues = ["2fh2phf", "2oijfoiesnf", "i2efhiouwefbuisb"]
-tokenNames = ["test1", "test23", "test4"]
-
-[HTTP]
-host = "localhost"
-port = "80"
-
-[UDP]
-host = "localhost"
-port = "53"
-
-[TCP]
-host = "localhost"
-port = "3000"
-
-[MongoDB]
-username = "helix"
-password = ""
-host = ""
-database = "honeypot-data"
-collection = "k8s-data"
-uri = ""
-logToMongoDB = false
+```sh
+make build
+make run
+make docker
 ```
 
-### Local Testing
-To test Helix locally, follow these steps:
+`make run` starts the default Kubernetes sensor. Configuration uses the same environment variables described above. GitHub Actions builds and tests Go packages and the container on pushes and pull requests; pushes to `main`, `develop`, and `v*` tags additionally build multi-arch (amd64/arm64) images with provenance and SBOM attestations and publish them to `ghcr.io/zeerg/helix-honeypot`.
 
-Clone this repository.
-Run docker-compose up -d to start Helix as a Docker container.
+## License
 
-```
-version: '3.7'
-
-services:
-  helix-honeypot-k8s:
-    build: ./
-    ports:
-      - "8111:8111"
-    environment:
-      - RUN_MODE=k8s
-      - HELIX_LOCATION=testing
-      - K8SAPI_VERSION=v1.21
-      - IP_BASE=192.168
-      - GENERATE_KUBE_SYSTEM=true
-      - GENERATE_RANDOMNESS=true
-      - K8S_HOST=0.0.0.0
-      - K8S_PORT=8111
-
-  helix-honeypot-http:
-    build: ./
-    ports:
-      - "8000:8000"
-    environment:
-      - RUN_MODE=http
-      - HELIX_HTTP_HOST=0.0.0.0
-      - HELIX_HTTP_PORT=8000
-
-  helix-honeypot-tcp:
-    build: ./
-    ports:
-      - "3000:3000"
-    environment:
-      - RUN_MODE=tcp
-      - HELIX_TCP_HOST=0.0.0.0
-      - HELIX_TCP_PORT=3000
-
-  helix-honeypot-udp:
-    build: ./
-    ports:
-      - "53:53/udp"
-    environment:
-      - RUN_MODE=udp
-      - HELIX_UDP_HOST=0.0.0.0
-      - HELIX_UDP_PORT=53
-
-  helix-honeypot-def:
-    build: ./
-    ports:
-      - "8001:8001"
-    environment:
-      - RUN_MODE=def
-      - HELIX_DEF_HOST=0.0.0.0
-      - HELIX_DEF_PORT=8001
-
-```
+MIT. See [LICENSE.txt](LICENSE.txt).

@@ -1,0 +1,11 @@
+# Optional overlay for loading a local, private config.toml into the container.
+# Usage: copy config.example.toml to config.toml, then run Compose with this file.
+services:
+  k8s:
+    volumes:
+      - type: bind
+        source: ${HELIX_CONFIG_FILE:-./config.toml}
+        target: /etc/helix/config.toml
+        read_only: true
+        bind:
+          create_host_path: false

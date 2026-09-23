@@ -1,84 +1,65 @@
 package udp
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
 
-	"helix-honeypot/model"
 	"helix-honeypot/logger"
-
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
+	"helix-honeypot/model"
 )
 
-func StartUDPHoneypot(cfg *model.Config) {
+const (
+	maxUDPDatagramSize = 65535
+	udpPollInterval    = time.Second
+)
 
-	serverInfo := fmt.Sprintf("%s:%s", cfg.UDP.Host, cfg.UDP.Port)
-	listen, err := net.ListenPacket("udp", serverInfo)
-
-	if err != nil {
-		fmt.Println(err)
-		return
+// StartUDPHoneypot records datagram metadata and byte counts without retaining
+// or replying with datagram contents.
+func StartUDPHoneypot(ctx context.Context, cfg *model.Config) error {
+	if cfg == nil {
+		return errors.New("UDP honeypot requires configuration")
 	}
-	defer listen.Close()
-
-	// Initialize logger
-	customLogger, err := logger.NewCustomLogger(cfg)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
+	addr := net.JoinHostPort(cfg.UDP.Host, cfg.UDP.Port)
+	listener, err := net.ListenPacket("udp", addr)
+	if err != nil {
+		return fmt.Errorf("listen UDP honeypot: %w", err)
+	}
+	defer listener.Close()
+
+	eventLogger, err := logger.NewEventLoggerFromConfig(nil, cfg)
+	if err != nil {
+		return fmt.Errorf("configure event sinks: %w", err)
+	}
+	defer eventLogger.Close()
+	buf := make([]byte, maxUDPDatagramSize)
 	for {
-		buf := make([]byte, 1024)
-		n, addr, err := listen.ReadFrom(buf)
-		if err != nil {
-			continue
+		if ctx.Err() != nil {
+			return nil
 		}
-		go serve(cfg.MachineID, listen, addr, buf[:n], customLogger)
-	}
-}
-
-func serve(machineID string, listen net.PacketConn, addr net.Addr, buf []byte, customLogger *logger.LocalCustomLogger) {
-
-	remoteHost, remotePort, err := net.SplitHostPort(addr.String())
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	var message model.UDPMessage
-	messageID := uuid.New()
-	message.MessageId = messageID.String()
-	message.Timestamp = time.Now().UTC().Unix()
-	message.RemoteIP = remoteHost
-	message.RemotePort = remotePort
-	message.Data = string(buf)
-
-	data, err := json.Marshal(message)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	// Unmarshal JSON string to bson.M
-	var messageObject bson.M
-	err = json.Unmarshal(data, &messageObject)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	// Log the incoming request
-	entryFields := logrus.Fields{
-		"message": messageObject,
-	}
-
-	customLogger.Logger.WithFields(entryFields).Info("Received UDP request")
-
-	// Log to MongoDB
-	if customLogger.Cfg.MongoDB.LogToMongoDB {
-		customLogger.LogToMongoDB(entryFields, time.Now())
+		if err := listener.SetReadDeadline(time.Now().Add(udpPollInterval)); err != nil {
+			return fmt.Errorf("set UDP honeypot read deadline: %w", err)
+		}
+		n, remote, err := listener.ReadFrom(buf)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			if timeout, ok := err.(net.Error); ok && timeout.Timeout() {
+				continue
+			}
+			return fmt.Errorf("read UDP honeypot datagram: %w", err)
+		}
+		eventLogger.Write(model.Event{
+			Sensor:        "udp",
+			RemoteAddr:    remote.String(),
+			BytesReceived: int64(n),
+		})
 	}
 }

@@ -1,53 +1,86 @@
-version: '3.7'
+name: helix-honeypot
+
+x-log-options: &log-options
+  HELIX_LOG_FORMAT: ${HELIX_LOG_FORMAT-}
+  HELIX_LOG_INCLUDE_USER_AGENT: ${HELIX_LOG_INCLUDE_USER_AGENT-}
+  HELIX_LOG_TRUSTED_PROXY_CIDRS: ${HELIX_LOG_TRUSTED_PROXY_CIDRS-}
+
+x-sensor: &sensor
+  image: helix-honeypot:local
+  init: true
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 64
+  mem_limit: 128m
+  cpus: 0.50
+  restart: unless-stopped
+  networks:
+    - honeynet
 
 services:
-  helix-honeypot-k8s:
-    build: ./
-    ports:
-      - "8111:8111"
+  k8s:
+    <<: *sensor
+    build: .
     environment:
-      - RUN_MODE=k8s
-      - HELIX_LOCATION=testing
-      - K8SAPI_VERSION=v1.21
-      - IP_BASE=192.168
-      - GENERATE_KUBE_SYSTEM=true
-      - GENERATE_RANDOMNESS=true
-      - K8S_HOST=0.0.0.0
-      - K8S_PORT=8111
-
-  helix-honeypot-http:
-    build: ./
+      <<: *log-options
+      HELIX_RUN_MODE: k8s
+      HELIX_K8S_HOST: 0.0.0.0
+      HELIX_K8S_PORT: "8080"
+      HELIX_K8S_API_VERSION: ${HELIX_K8S_API_VERSION-}
     ports:
-      - "8000:8000"
-    environment:
-      - RUN_MODE=http
-      - HELIX_HTTP_HOST=0.0.0.0
-      - HELIX_HTTP_PORT=8000
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_K8S_PUBLISHED_PORT:-8080}:8080"
 
-  helix-honeypot-tcp:
-    build: ./
+  http:
+    <<: *sensor
+    profiles: [all]
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: http
+      HELIX_HTTP_HOST: 0.0.0.0
+      HELIX_HTTP_PORT: "8081"
     ports:
-      - "3000:3000"
-    environment:
-      - RUN_MODE=tcp
-      - HELIX_TCP_HOST=0.0.0.0
-      - HELIX_TCP_PORT=3000
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_HTTP_PUBLISHED_PORT:-8081}:8081"
 
-  helix-honeypot-udp:
-    build: ./
+  tcp:
+    <<: *sensor
+    profiles: [all]
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: tcp
+      HELIX_TCP_HOST: 0.0.0.0
+      HELIX_TCP_PORT: "9022"
     ports:
-      - "53:53/udp"
-    environment:
-      - RUN_MODE=udp
-      - HELIX_UDP_HOST=0.0.0.0
-      - HELIX_UDP_PORT=53
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_TCP_PUBLISHED_PORT:-9022}:9022"
 
-  helix-honeypot-def:
-    build: ./
+  udp:
+    <<: *sensor
+    profiles: [all]
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: udp
+      HELIX_UDP_HOST: 0.0.0.0
+      HELIX_UDP_PORT: "9053"
     ports:
-      - "8001:8001"
-    environment:
-      - RUN_MODE=def
-      - HELIX_DEF_HOST=0.0.0.0
-      - HELIX_DEF_PORT=8001
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_UDP_PUBLISHED_PORT:-9053}:9053/udp"
 
+  kubelet:
+    <<: *sensor
+    profiles: [all]
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: kubelet
+      HELIX_KUBELET_HOST: 0.0.0.0
+      HELIX_KUBELET_PORT: "10250"
+      HELIX_KUBELET_NODE_NAME: ${HELIX_KUBELET_NODE_NAME-}
+    ports:
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_KUBELET_PUBLISHED_PORT:-10250}:10250"
+
+networks:
+  honeynet:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.enable_icc: "false"

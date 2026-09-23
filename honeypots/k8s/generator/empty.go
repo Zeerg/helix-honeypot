@@ -13,11 +13,11 @@ type ColumnDefinition struct {
 }
 
 type Table struct {
-	Kind              string             `json:"kind"`
-	ApiVersion        string             `json:"apiVersion"`
-	Metadata          Metadata           `json:"metadata"`
+	Kind              string                   `json:"kind"`
+	ApiVersion        string                   `json:"apiVersion"`
+	Metadata          Metadata                 `json:"metadata"`
 	ColumnDefinitions []map[string]interface{} `json:"columnDefinitions"`
-	Rows              []interface{}      `json:"rows"`
+	Rows              []interface{}            `json:"rows"`
 }
 
 // ConvertMapToColumnDefinition converts a map into a ColumnDefinition struct

@@ -1,5 +1,9 @@
-images*
-Dockerfile
-docker-compose.yaml
-.git
+images/
+.git/
+.github/
+bin/
+.DS_Store
+*.md
 config.toml
+.env
+.env.*

@@ -1,93 +1,102 @@
 package tcp
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
-	"helix-honeypot/model"
 	"helix-honeypot/logger"
-
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
+	"helix-honeypot/model"
 )
 
-func StartTCPHoneypot(cfg *model.Config) {
+const (
+	maxTCPInput       = 64 * 1024
+	tcpReadTimeout    = 5 * time.Second
+	maxTCPConnections = 128
+)
 
-	serverInfo := fmt.Sprintf("%s:%s", cfg.TCP.Host, cfg.TCP.Port)
-	listen, err := net.Listen("tcp", serverInfo)
-
-	if err != nil {
-		fmt.Println(err)
-		return
+// StartTCPHoneypot accepts a bounded number of connections, reads a bounded
+// amount for a bounded duration, and records only metadata and byte counts.
+func StartTCPHoneypot(ctx context.Context, cfg *model.Config) error {
+	if cfg == nil {
+		return errors.New("TCP honeypot requires configuration")
 	}
-	defer listen.Close()
-
-	// Initialize logger
-	customLogger, err := logger.NewCustomLogger(cfg)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if ctx == nil {
+		ctx = context.Background()
 	}
+
+	addr := net.JoinHostPort(cfg.TCP.Host, cfg.TCP.Port)
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("listen TCP honeypot: %w", err)
+	}
+	defer listener.Close()
+
+	eventLogger, err := logger.NewEventLoggerFromConfig(nil, cfg)
+	if err != nil {
+		return fmt.Errorf("configure event sinks: %w", err)
+	}
+	defer eventLogger.Close()
+	connections := make(chan struct{}, maxTCPConnections)
+	var handlers sync.WaitGroup
+	listenFinished := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = listener.Close()
+		case <-listenFinished:
+		}
+	}()
+	defer func() {
+		close(listenFinished)
+		_ = listener.Close()
+		handlers.Wait()
+	}()
 
 	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Println(err)
-			continue
+		select {
+		case connections <- struct{}{}:
+		case <-ctx.Done():
+			return nil
 		}
-		go handleConn(cfg.MachineID, conn, customLogger)
+		conn, err := listener.Accept()
+		if err != nil {
+			<-connections
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("accept TCP honeypot connection: %w", err)
+		}
+		handlers.Add(1)
+		go func(conn net.Conn) {
+			defer handlers.Done()
+			defer func() { <-connections }()
+			readOneConnection(ctx, conn, eventLogger)
+		}(conn)
 	}
 }
 
-func handleConn(machineID string, conn net.Conn, customLogger *logger.LocalCustomLogger) {
+func readOneConnection(ctx context.Context, conn net.Conn, eventLogger *logger.EventLogger) {
 	defer conn.Close()
+	finished := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = conn.Close()
+		case <-finished:
+		}
+	}()
+	defer close(finished)
 
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// Split the remote address into host and port
-	remoteHost, remotePort, err := net.SplitHostPort(conn.RemoteAddr().String())
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	
-	var message model.TCPMessage
-	messageID := uuid.New()
-	message.MessageId = messageID.String()
-	message.Timestamp = time.Now().UTC().Unix()
-	message.RemoteIP = remoteHost
-	message.RemotePort = remotePort
-	message.Data = string(buf[:n])
-
-	data, err := json.Marshal(message)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	// Unmarshal JSON string to bson.M
-	var messageObject bson.M
-	err = json.Unmarshal(data, &messageObject)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	// Log the incoming request
-	entryFields := logrus.Fields{
-		"message": messageObject,
-	}
-
-	customLogger.Logger.WithFields(entryFields).Info("Received TCP request")
-
-	// Log to MongoDB
-	if customLogger.Cfg.MongoDB.LogToMongoDB {
-		customLogger.LogToMongoDB(entryFields, time.Now())
-	}
+	_ = conn.SetReadDeadline(time.Now().Add(tcpReadTimeout))
+	buf := make([]byte, maxTCPInput)
+	n, _ := conn.Read(buf)
+	eventLogger.Write(model.Event{
+		Sensor:        "tcp",
+		RemoteAddr:    conn.RemoteAddr().String(),
+		BytesReceived: int64(n),
+	})
 }

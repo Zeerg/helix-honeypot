@@ -1,0 +1,50 @@
+# Default configuration baked into the container image. Unlike the binary's
+# loopback-only defaults, container listeners bind every interface so
+# `docker run -p` works out of the box; publishing remains the operator's
+# choice. Override by bind-mounting a file over /etc/helix/config.toml or by
+# pointing HELIX_CONFIG at another path. Environment variables still win over
+# these values.
+
+[run_mode]
+mode = "k8s"
+
+[k8s]
+api_version = "v1.37"
+ip_base = "10.42.0.0"
+generate_kube_system = true
+generate_randomness = false
+host = "0.0.0.0"
+port = "8080"
+namespaces = ["payments", "monitoring"]
+
+# Synthetic lure so the default deployment looks inhabited. It lives in the
+# built-in "default" namespace so HELIX_K8S_NAMESPACES overrides can never
+# orphan it. The values are placeholders only; names and payloads are
+# redacted from event logs.
+[[k8s.honeytokens]]
+name = "synthetic-api-token"
+namespace = "default"
+type = "Opaque"
+data = { token = "synthetic-only-placeholder", username = "example-user" }
+
+[http]
+host = "0.0.0.0"
+port = "8081"
+
+[tcp]
+host = "0.0.0.0"
+port = "9022"
+
+[udp]
+host = "0.0.0.0"
+port = "9053"
+
+[kubelet]
+host = "0.0.0.0"
+port = "10250"
+node_name = "worker-01"
+
+[logging]
+format = "json"
+include_user_agent = false
+trusted_proxy_cidrs = []

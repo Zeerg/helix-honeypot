@@ -1,0 +1,87 @@
+[run_mode]
+mode = "k8s"
+
+[k8s]
+api_version = "v1.37"
+ip_base = "10.42.0.0"
+generate_kube_system = true
+generate_randomness = false
+host = "127.0.0.1"
+port = "8080"
+namespaces = ["payments"]
+
+# Use synthetic-only values. These structured honeytokens are served as
+# Kubernetes Secrets; their names and payloads are not written to event logs.
+# Environment alternative: HELIX_K8S_HONEYTOKENS takes semicolon-separated
+# "name[@namespace]:key=value[,key=value]" entries (Opaque type; TOML is
+# needed for other types or values containing ',' or ';').
+[[k8s.honeytokens]]
+name = "synthetic-api-token"
+namespace = "payments"
+type = "Opaque"
+data = { token = "synthetic-only-placeholder", username = "example-user" }
+
+# Legacy single-key lists remain supported for older deployments.
+# token_names = ["example-service-token"]
+# token_values = ["synthetic-only-placeholder"]
+
+[http]
+host = "127.0.0.1"
+port = "8081"
+
+[tcp]
+host = "127.0.0.1"
+port = "9022"
+
+[udp]
+host = "127.0.0.1"
+port = "9053"
+
+# Kubelet mode emulates a kubelet with anonymous read access enabled — the
+# common misconfiguration scanners hunt for. Streaming endpoints (exec,
+# attach, portforward, run) are always refused but their attempts are logged.
+[kubelet]
+host = "127.0.0.1"
+port = "10250"
+node_name = "worker-01"
+
+[logging]
+format = "json"
+include_user_agent = false
+trusted_proxy_cidrs = []
+
+# Additional event destinations. The local output above remains the primary
+# record; sinks are best-effort fan-out that batch events and drop rather than
+# block the honeypot. Supported types: file, splunk, elasticsearch, http.
+# Up to 8 sinks; sink tokens, passwords, and header values are never logged.
+#
+# One sink of each type can be configured without this file, e.g.
+# HELIX_LOG_FILE=/path/events.jsonl, HELIX_SPLUNK_URL + HELIX_SPLUNK_TOKEN,
+# HELIX_ELASTICSEARCH_URL + HELIX_ELASTICSEARCH_INDEX, HELIX_HTTP_SINK_URL.
+# Environment-defined sinks are appended to these entries.
+
+# [[logging.sinks]]
+# type = "file"
+# path = "/var/log/helix-honeypot/events.jsonl"
+
+# [[logging.sinks]]
+# type = "splunk"
+# url = "https://splunk-hec.example.internal:8088"
+# # /services/collector/event is appended when the URL has no path
+# token = "00000000-0000-0000-0000-000000000000"
+# index = "honeypot"
+# sourcetype = "_json"
+
+# [[logging.sinks]]
+# type = "elasticsearch"
+# url = "https://es.example.internal:9200"
+# index = "honeypot-events"   # required; lowercase, no \/ *?"<>| ,#:
+# token = "base64-api-key"    # sent as Authorization: ApiKey
+# # username = "elastic"      # or HTTP basic auth instead of a token
+# # password = "changeme"
+
+# [[logging.sinks]]
+# type = "http"               # generic NDJSON webhook (Vector, Fluent Bit, ...)
+# url = "https://collector.example.internal/events"
+# headers = { Authorization = "Bearer ..." }
+# # token = "..."             # shorthand for Authorization: Bearer

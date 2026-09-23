@@ -50,7 +50,6 @@ func GenerateKubeSystemConfig(cfg *model.Config, namespace string) map[string]in
 	return generatePodConfig(cfg, namespace, podNames, "1110")
 }
 
-
 func GenerateDefaultNamespaceConfig(cfg *model.Config, namespace string) map[string]interface{} {
 	podNames := []string{
 		"database", "message-queue", "cache", "nginx", "apache", "tomcat",

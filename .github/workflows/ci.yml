@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build Go packages
+        run: go build ./...
+      - name: Run Go tests
+        run: go test ./...
+      - name: Static analysis
+        run: go vet ./...
+      - name: Build hardened container
+        run: docker build --tag helix-honeypot:ci .
