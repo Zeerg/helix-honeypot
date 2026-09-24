@@ -135,6 +135,24 @@ func applyEnvironment(cfg *model.Config) error {
 	setString(&cfg.Kubelet.Host, "HELIX_KUBELET_HOST")
 	setString(&cfg.Kubelet.Port, "HELIX_KUBELET_PORT")
 	setString(&cfg.Kubelet.NodeName, "HELIX_KUBELET_NODE_NAME")
+	setString(&cfg.Kubelet.TLSCertFile, "HELIX_KUBELET_TLS_CERT_FILE")
+	setString(&cfg.Kubelet.TLSKeyFile, "HELIX_KUBELET_TLS_KEY_FILE")
+	setString(&cfg.K8S.TLSCertFile, "HELIX_K8S_TLS_CERT_FILE")
+	setString(&cfg.K8S.TLSKeyFile, "HELIX_K8S_TLS_KEY_FILE")
+	if value, ok := firstSetEnv("HELIX_K8S_TLS_ENABLED"); ok {
+		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid boolean for HELIX_K8S_TLS_ENABLED")
+		}
+		cfg.K8S.TLSEnabled = parsed
+	}
+	if value, ok := firstSetEnv("HELIX_KUBELET_TLS_ENABLED"); ok {
+		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid boolean for HELIX_KUBELET_TLS_ENABLED")
+		}
+		cfg.Kubelet.TLSEnabled = &parsed
+	}
 
 	if value, ok := firstSetEnv("HELIX_K8S_GENERATE_KUBE_SYSTEM", "GENERATE_KUBE_SYSTEM"); ok {
 		parsed, err := strconv.ParseBool(value)

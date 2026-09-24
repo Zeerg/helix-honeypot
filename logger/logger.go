@@ -532,6 +532,7 @@ func marshalText(event model.Event) []byte {
 	line = appendTextInt(line, "bytes_received", event.BytesReceived, true)
 	line = appendTextInt(line, "bytes_sent", event.BytesSent, true)
 	line = appendTextString(line, "user_agent", event.UserAgent, true)
+	line = appendTextString(line, "detail", event.Detail, true)
 	return line
 }
 

@@ -79,6 +79,7 @@ Start from the checked-in example with `cp config.example.toml config.toml` and 
 | Sensor mode | `HELIX_RUN_MODE` (`RUN_MODE` is also accepted) | `k8s` |
 | Kubernetes bind address | `HELIX_K8S_HOST` | `127.0.0.1` |
 | Kubernetes port | `HELIX_K8S_PORT` | `8080` |
+| Kubernetes TLS (`https://`, self-signed serving cert unless files given) | `HELIX_K8S_TLS_ENABLED`, `HELIX_K8S_TLS_CERT_FILE`, `HELIX_K8S_TLS_KEY_FILE` | off, generated |
 | Kubernetes API profile | `HELIX_K8S_API_VERSION` | `v1.37` |
 | Kubernetes pod network base | `HELIX_K8S_IP_BASE` (`IP_BASE`) | `10.42.0.0` |
 | Additional Kubernetes namespaces | `HELIX_K8S_NAMESPACES` (comma-separated) | built-ins only |
@@ -88,6 +89,7 @@ Start from the checked-in example with `cp config.example.toml config.toml` and 
 | UDP bind address / port | `HELIX_UDP_HOST`, `HELIX_UDP_PORT` | `127.0.0.1`, `9053` |
 | Kubelet bind address / port | `HELIX_KUBELET_HOST`, `HELIX_KUBELET_PORT` | `127.0.0.1`, `10250` |
 | Kubelet node name | `HELIX_KUBELET_NODE_NAME` | `worker-01` |
+| Kubelet TLS (kubelets are HTTPS; set `false` for plain HTTP) | `HELIX_KUBELET_TLS_ENABLED`, `HELIX_KUBELET_TLS_CERT_FILE`, `HELIX_KUBELET_TLS_KEY_FILE` | on, generated |
 | Event format | `HELIX_LOG_FORMAT` | `json` |
 | Include user-agent in events | `HELIX_LOG_INCLUDE_USER_AGENT` | `false` |
 | Trusted proxy CIDRs | `HELIX_LOG_TRUSTED_PROXY_CIDRS` (comma-separated) | none |

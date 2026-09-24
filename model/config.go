@@ -16,9 +16,12 @@ type TCPConfig struct {
 }
 
 type KubeletConfig struct {
-	Host     string `toml:"host"`
-	Port     string `toml:"port"`
-	NodeName string `toml:"node_name"`
+	Host        string `toml:"host"`
+	Port        string `toml:"port"`
+	NodeName    string `toml:"node_name"`
+	TLSEnabled  *bool  `toml:"tls_enabled"`
+	TLSCertFile string `toml:"tls_cert_file"`
+	TLSKeyFile  string `toml:"tls_key_file"`
 }
 
 type RunModeConfig struct {
@@ -32,6 +35,9 @@ type K8SConfig struct {
 	GenerateRand    bool            `toml:"generate_randomness"`
 	Host            string          `toml:"host"`
 	Port            string          `toml:"port"`
+	TLSEnabled      bool            `toml:"tls_enabled"`
+	TLSCertFile     string          `toml:"tls_cert_file"`
+	TLSKeyFile      string          `toml:"tls_key_file"`
 	Namespaces      []string        `toml:"namespaces"`
 	Honeytokens     []K8SHoneytoken `toml:"honeytokens"`
 	// TokenNames and TokenValues remain for compatibility with older configs.

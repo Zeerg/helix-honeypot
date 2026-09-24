@@ -15,6 +15,7 @@ import (
 	"helix-honeypot/honeypots/k8s/handler"
 	"helix-honeypot/honeypots/k8s/router"
 	"helix-honeypot/internal/netlimit"
+	"helix-honeypot/internal/tlsgen"
 	"helix-honeypot/logger"
 	"helix-honeypot/model"
 )
@@ -47,7 +48,16 @@ func StartK8SHoneypot(ctx context.Context, cfg *model.Config) error {
 		baseListener.Close()
 		return fmt.Errorf("cap Kubernetes honeypot connections: %w", err)
 	}
-	defer cappedListener.Close()
+	listener := net.Listener(cappedListener)
+	if cfg.K8S.TLSEnabled {
+		cert, certErr := tlsgen.Certificate(cfg.K8S.TLSCertFile, cfg.K8S.TLSKeyFile, "kube-apiserver", cfg.K8S.Host)
+		if certErr != nil {
+			cappedListener.Close()
+			return fmt.Errorf("configure Kubernetes honeypot TLS: %w", certErr)
+		}
+		listener = tlsgen.WrapListener(cappedListener, cert)
+	}
+	defer listener.Close()
 
 	e := router.New()
 	e.Use(recoverPanics)
@@ -57,12 +67,13 @@ func StartK8SHoneypot(ctx context.Context, cfg *model.Config) error {
 		return fmt.Errorf("configure event sinks: %w", err)
 	}
 	defer events.Close()
+	api.SetEmitter(events.Write)
 	e.Use(events.HTTPMiddleware("kubernetes"))
 	e.Any("/", api.ServeHTTP)
 	e.Any("/*", api.ServeHTTP)
 
 	start := echo.StartConfig{
-		Listener:        cappedListener,
+		Listener:        listener,
 		HideBanner:      true,
 		HidePort:        true,
 		GracefulTimeout: 5 * time.Second,

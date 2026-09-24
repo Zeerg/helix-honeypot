@@ -399,11 +399,32 @@ func (a *API) seed(cfg *model.Config) {
 			"status": map[string]any{
 				"capacity":    map[string]string{"cpu": "4", "memory": "16Gi", "pods": "110"},
 				"allocatable": map[string]string{"cpu": "3900m", "memory": "15Gi", "pods": "110"},
-				"addresses":   []any{map[string]string{"type": "InternalIP", "address": address}, map[string]string{"type": "Hostname", "address": node.name}},
+				"addresses":   []any{map[string]string{"type": "InternalIP", "address": address}, map[string]any{"type": "Hostname", "address": node.name}},
 				"nodeInfo":    map[string]string{"containerRuntimeVersion": "containerd://2.1.0", "kubeletVersion": a.version + ".0", "kubeProxyVersion": a.version + ".0", "operatingSystem": "linux", "architecture": "amd64", "osImage": "Linux", "kernelVersion": "6.8.0"},
 				"conditions":  []any{map[string]any{"type": "Ready", "status": "True", "reason": "KubeletReady", "lastHeartbeatTime": store.startedAt.Format(time.RFC3339), "lastTransitionTime": store.startedAt.Format(time.RFC3339)}}},
 		})
+		seed(groupVersion{"coordination.k8s.io", "v1"}, "leases", "kube-node-lease", node.name, map[string]any{
+			"spec": map[string]any{
+				"holderIdentity":       node.name,
+				"leaseDurationSeconds": 40,
+				"renewTime":            store.startedAt.Format("2006-01-02T15:04:05.000000Z07:00"),
+				"acquireTime":          store.startedAt.Format("2006-01-02T15:04:05.000000Z07:00"),
+				"leaseTransitions":     0,
+			},
+		})
 	}
+
+	// Every real cluster exposes the apiserver's own Service and Endpoints in
+	// the default namespace, independent of the optional workload generators.
+	seed(groupVersion{"", "v1"}, "services", "default", "kubernetes", map[string]any{
+		"spec": map[string]any{"clusterIP": serviceAddress(cfg.K8S.IPBase, 20), "ports": []any{map[string]any{"name": "https", "port": 443, "protocol": "TCP", "targetPort": 6443}}, "type": "ClusterIP"},
+	})
+	seed(groupVersion{"", "v1"}, "endpoints", "default", "kubernetes", map[string]any{
+		"subsets": []any{map[string]any{
+			"addresses": []any{map[string]any{"ip": nodeAddress(cfg.K8S.IPBase, 10)}},
+			"ports":     []any{map[string]any{"name": "https", "port": 6443, "protocol": "TCP"}},
+		}},
+	})
 
 	if cfg.K8S.GenerateKubeSys {
 		for i, pod := range []struct{ name, image string }{
@@ -427,9 +448,6 @@ func (a *API) seed(cfg *model.Config) {
 		} {
 			seed(groupVersion{"", "v1"}, "pods", "default", pod.name, podObject(pod.name, "default", pod.image, podAddress(cfg.K8S.IPBase, 2, 40+i), "worker-01", "app", strings.Split(pod.name, "-")[0], nodeAddress(cfg.K8S.IPBase, 11)))
 		}
-		seed(groupVersion{"", "v1"}, "services", "default", "kubernetes", map[string]any{
-			"spec": map[string]any{"clusterIP": serviceAddress(cfg.K8S.IPBase, 20), "ports": []any{map[string]any{"name": "https", "port": 443, "protocol": "TCP", "targetPort": 6443}}, "type": "ClusterIP"},
-		})
 		seed(groupVersion{"apps", "v1"}, "deployments", "default", "web", map[string]any{
 			"spec":   map[string]any{"replicas": 1, "selector": map[string]any{"matchLabels": map[string]string{"app": "web"}}, "template": map[string]any{"metadata": map[string]any{"labels": map[string]string{"app": "web"}}, "spec": map[string]any{"containers": []any{map[string]any{"name": "web", "image": "nginx:1.30.5", "ports": []any{map[string]any{"containerPort": 80}}}}}}},
 			"status": map[string]any{"availableReplicas": 1, "readyReplicas": 1, "replicas": 1, "updatedReplicas": 1},
@@ -489,7 +507,113 @@ func (a *API) seed(cfg *model.Config) {
 			})
 		}
 	}
+
+	// Every namespace on a real cluster carries a default ServiceAccount and
+	// the kube-root-ca.crt ConfigMap. These run last so configured honeytokens
+	// always win the bounded seed budget.
+	for _, namespace := range namespaceOrder {
+		seed(groupVersion{"", "v1"}, "serviceaccounts", namespace, "default", map[string]any{})
+		seed(groupVersion{"", "v1"}, "configmaps", namespace, "kube-root-ca.crt", map[string]any{
+			"data": map[string]string{"ca.crt": rootCAPEM},
+		})
+	}
+
+	// A real cluster registers one APIService per served group/version, all
+	// satisfied by the local apiserver; metrics.k8s.io points at the
+	// metrics-server Service instead.
+	available := map[string]any{"type": "Available", "status": "True", "reason": "Passed", "lastTransitionTime": store.startedAt.Format(time.RFC3339)}
+	for gv := range apiCatalog {
+		name := gv.Version + "."
+		if gv.Group == "" {
+			name = gv.Version
+		} else {
+			name += gv.Group
+		}
+		spec := map[string]any{"group": gv.Group, "version": gv.Version, "groupPriorityMinimum": 1000, "versionPriority": 15}
+		if gv.Group == "metrics.k8s.io" {
+			spec["service"] = map[string]any{"name": "metrics-server", "namespace": "kube-system", "port": 443}
+		}
+		seed(groupVersion{"apiregistration.k8s.io", "v1"}, "apiservices", "", name, map[string]any{
+			"spec":   spec,
+			"status": map[string]any{"conditions": []any{available}},
+		})
+	}
+
+	// The cert-manager CRDs imply its webhook is registered too.
+	seed(groupVersion{"admissionregistration.k8s.io", "v1"}, "validatingwebhookconfigurations", "", "cert-manager-webhook", map[string]any{
+		"webhooks": []any{map[string]any{
+			"name":                    "webhook.cert-manager.io",
+			"admissionReviewVersions": []string{"v1"},
+			"sideEffects":             "None",
+			"failurePolicy":           "Fail",
+			"clientConfig":            map[string]any{"service": map[string]any{"name": "cert-manager-webhook", "namespace": "cert-manager", "path": "/validate"}},
+			"rules": []any{map[string]any{
+				"apiGroups": []string{"cert-manager.io"}, "apiVersions": []string{"v1"},
+				"operations": []string{"CREATE", "UPDATE"}, "resources": []string{"*/*"},
+			}},
+		}},
+	})
+
+	// A cluster that's been running a while accumulates third-party CRDs.
+	for _, crd := range []struct{ name, group, plural, kind string }{
+		{"prometheusrules.monitoring.coreos.com", "monitoring.coreos.com", "prometheusrules", "PrometheusRule"},
+		{"certificates.cert-manager.io", "cert-manager.io", "certificates", "Certificate"},
+		{"ingressroutes.traefik.io", "traefik.io", "ingressroutes", "IngressRoute"},
+	} {
+		seed(groupVersion{"apiextensions.k8s.io", "v1"}, "customresourcedefinitions", "", crd.name, map[string]any{
+			"spec": map[string]any{
+				"group": crd.group,
+				"names": map[string]any{"plural": crd.plural, "singular": strings.ToLower(crd.kind), "kind": crd.kind, "listKind": crd.kind + "List"},
+				"scope": "Namespaced",
+				"versions": []any{map[string]any{
+					"name": "v1", "served": true, "storage": true,
+					"schema": map[string]any{"openAPIV3Schema": map[string]any{"type": "object", "x-kubernetes-preserve-unknown-fields": true}},
+				}},
+			},
+			"status": map[string]any{
+				"acceptedNames": map[string]any{"plural": crd.plural, "kind": crd.kind},
+				"conditions":    []any{map[string]any{"type": "Established", "status": "True", "reason": "InitialNamesAccepted", "lastTransitionTime": store.startedAt.Format(time.RFC3339)}},
+			},
+		})
+	}
+	for _, role := range []string{
+		"cluster-admin", "admin", "edit", "view",
+		"system:aggregate-to-admin", "system:aggregate-to-edit", "system:aggregate-to-view",
+		"system:basic-user", "system:discovery", "system:public-info-viewer",
+		"system:auth-delegator", "system:kube-controller-manager", "system:kube-scheduler",
+		"system:controller:attachdetach-controller", "system:controller:deployment-controller",
+		"system:kube-dns", "system:kube-proxy", "system:node", "system:node-proxier",
+		"system:metrics-server",
+	} {
+		seed(groupVersion{"rbac.authorization.k8s.io", "v1"}, "clusterroles", "", role, map[string]any{
+			"rules": []any{},
+		})
+	}
+	for _, binding := range []string{
+		"cluster-admin", "system:basic-user", "system:discovery", "system:public-info-viewer",
+		"system:kube-controller-manager", "system:kube-scheduler", "system:metrics-server",
+	} {
+		seed(groupVersion{"rbac.authorization.k8s.io", "v1"}, "clusterrolebindings", "", binding, map[string]any{
+			"roleRef":  map[string]string{"apiGroup": "rbac.authorization.k8s.io", "kind": "ClusterRole", "name": binding},
+			"subjects": []any{},
+		})
+	}
 }
+
+const rootCAPEM = `-----BEGIN CERTIFICATE-----
+MIIDBTCCAe2gAwIBAgIIRg9i3sQzLw4wDQYJKoZIhvcNAQELBQAwFTETMBEGA1UE
+AxMKa3ViZXJuZXRlczAeFw0yNjA5MjQxMjUxMDdaFw0zNjA5MjIxMjUxMDdaMBUx
+EzARBgNVBAMTCmt1YmVybmV0ZXMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQDczvdV7kY+GxXMJgX0hC8z3mJzNbxqSxP4uKqJjZ0dYkL4WQ1fK0mHv7nG
+k7Hj9hZ9Kp2WvQpZJ8q7x0h0p9uF3kY6gZqJ0z2m7YvB0cH9k4wQ4uK1y9z2H8v
+n0Xb7Q0mD2gP1vY4z5iH8gN7kX0wM3tL9cF1bV6xK8jH2dP5sA4fG9nQ0wE7rT3
+yU6iO1pA8sD4fG7hJ0kL2zX5cV8bN1mQ4wR7tY3uI6oP9aS2dF5gH8jK1lZ4xC7
+vB0nM3qW6eR9tY2uI5oP8aS1dF4gH7jK0lZ3xC6vB9nM2qW5eR8tY1uI4oP7aS0
+dF3gH6jK9lZ2xC5vB8nM1qW4eR7tY0uI3oP6aS9dF2gH5jK8lZ1xC4vB7nM0qW
+AgMBAAGjRjBEMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1Ud
+DgQWBBQ0bW9ja2VkLWNhLWZvci10ZXN0MA0GCSqGSIb3DQEBCwUAA4IBAQCqK3z8
+pV7jQ0dY2mF8hN5sK1xW9rT4uI6oP3aS7dG0fJ4kL9zX2cV5bN8mQ1wR4tY7uI0
+-----END CERTIFICATE-----`
 
 func encodeSecretData(data map[string]string) (map[string]string, bool) {
 	if len(data) > maxSecretDataKeys {
@@ -577,4 +701,22 @@ func addressParts(base string) [4]int {
 		address[i] = value
 	}
 	return address
+}
+
+// seedNamespaceObjects provisions what the namespace controller and root CA
+// publisher create in every new namespace: a default ServiceAccount and the
+// kube-root-ca.crt ConfigMap.
+func (a *API) seedNamespaceObjects(namespace string) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_ = a.store.put(objectKey{"", "v1", "serviceaccounts", namespace, "default"}, map[string]any{
+		"apiVersion": "v1", "kind": "ServiceAccount",
+		"metadata": map[string]any{"name": "default", "namespace": namespace, "creationTimestamp": now,
+			"uid": stableUID("serviceaccount/" + namespace + "/default")},
+	}, "ADDED")
+	_ = a.store.put(objectKey{"", "v1", "configmaps", namespace, "kube-root-ca.crt"}, map[string]any{
+		"apiVersion": "v1", "kind": "ConfigMap",
+		"metadata": map[string]any{"name": "kube-root-ca.crt", "namespace": namespace, "creationTimestamp": now,
+			"uid": stableUID("configmap/" + namespace + "/kube-root-ca.crt")},
+		"data": map[string]any{"ca.crt": rootCAPEM},
+	}, "ADDED")
 }

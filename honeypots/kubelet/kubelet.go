@@ -19,6 +19,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"helix-honeypot/internal/netlimit"
+	"helix-honeypot/internal/tlsgen"
 	"helix-honeypot/logger"
 	"helix-honeypot/model"
 )
@@ -58,11 +59,22 @@ func StartKubeletHoneypot(ctx context.Context, cfg *model.Config) error {
 		_ = listener.Close()
 		return fmt.Errorf("cap kubelet honeypot listener: %w", err)
 	}
-	defer cappedListener.Close()
+	serveListener := net.Listener(cappedListener)
+	// Real kubelets serve HTTPS on 10250; plain HTTP is the anomaly.
+	tlsEnabled := cfg.Kubelet.TLSEnabled == nil || *cfg.Kubelet.TLSEnabled
+	if tlsEnabled {
+		cert, certErr := tlsgen.Certificate(cfg.Kubelet.TLSCertFile, cfg.Kubelet.TLSKeyFile, "system:node:"+cfg.Kubelet.NodeName, cfg.Kubelet.Host)
+		if certErr != nil {
+			_ = cappedListener.Close()
+			return fmt.Errorf("configure kubelet honeypot TLS: %w", certErr)
+		}
+		serveListener = tlsgen.WrapListener(cappedListener, cert)
+	}
+	defer serveListener.Close()
 
 	start := echo.StartConfig{
 		Address:         addr,
-		Listener:        cappedListener,
+		Listener:        serveListener,
 		HideBanner:      true,
 		HidePort:        true,
 		GracefulTimeout: shutdownTimeout,

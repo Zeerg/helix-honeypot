@@ -14,4 +14,5 @@ type Event struct {
 	BytesReceived int64  `json:"bytes_received,omitempty"`
 	BytesSent     int64  `json:"bytes_sent,omitempty"`
 	UserAgent     string `json:"user_agent,omitempty"`
+	Detail        string `json:"detail,omitempty"`
 }

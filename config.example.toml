@@ -8,6 +8,9 @@ generate_kube_system = true
 generate_randomness = false
 host = "127.0.0.1"
 port = "8080"
+# tls_enabled = true                    # serve HTTPS; self-signed cert by default
+# tls_cert_file = "/path/serving.crt"   # operator-provided pair, like a real apiserver
+# tls_key_file = "/path/serving.key"
 namespaces = ["payments"]
 
 # Use synthetic-only values. These structured honeytokens are served as
@@ -44,6 +47,11 @@ port = "9053"
 host = "127.0.0.1"
 port = "10250"
 node_name = "worker-01"
+# Real kubelets serve HTTPS; TLS defaults on with a generated
+# system:node:<node_name> self-signed certificate.
+# tls_enabled = false                   # plain HTTP (unrealistic, opt-out only)
+# tls_cert_file = "/path/kubelet.crt"
+# tls_key_file = "/path/kubelet.key"
 
 [logging]
 format = "json"
