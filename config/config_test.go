@@ -66,6 +66,28 @@ func TestNewConfigDoesNotEchoMalformedSecretConfig(t *testing.T) {
 	}
 }
 
+func TestSchemaConfigurationNormalizesVersionAndSupportsOfflineOverride(t *testing.T) {
+	clearConfigEnvironment(t)
+	filename := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(filename, []byte("[k8s]\napi_version = '1.25'\nschema_offline = true\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := NewConfig(filename)
+	if err != nil || cfg.K8S.APIVersion != "v1.25" || !cfg.K8S.SchemaOffline {
+		t.Fatalf("TOML schema settings were not loaded: %v", err)
+	}
+	t.Setenv("HELIX_K8S_API_VERSION", "1.26")
+	t.Setenv("HELIX_K8S_SCHEMA_OFFLINE", "false")
+	cfg, err = NewConfig(filename)
+	if err != nil || cfg.K8S.APIVersion != "v1.26" || cfg.K8S.SchemaOffline {
+		t.Fatalf("environment did not override TOML schema settings: %v", err)
+	}
+	t.Setenv("HELIX_K8S_SCHEMA_OFFLINE", "invalid")
+	if _, err := NewConfig(filename); err == nil {
+		t.Fatal("accepted malformed schema_offline")
+	}
+}
+
 func TestValidateRejectsUnconfiguredHoneytokenNamespace(t *testing.T) {
 	cfg := Defaults()
 	cfg.K8S.Namespaces = []string{"payments"}
@@ -252,6 +274,7 @@ func clearConfigEnvironment(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{
 		"RUN_MODE", "HELIX_RUN_MODE", "K8SAPI_VERSION", "HELIX_K8S_API_VERSION",
+		"HELIX_K8S_SCHEMA_OFFLINE",
 		"IP_BASE", "HELIX_K8S_IP_BASE", "K8S_HOST", "HELIX_K8S_HOST", "K8S_PORT", "HELIX_K8S_PORT",
 		"GENERATE_KUBE_SYSTEM", "HELIX_K8S_GENERATE_KUBE_SYSTEM", "GENERATE_RANDOMNESS", "HELIX_K8S_GENERATE_RANDOMNESS",
 		"HELIX_K8S_TOKEN_NAMES", "HELIX_K8S_TOKEN_VALUES", "HELIX_K8S_NAMESPACES", "HELIX_K8S_HONEYTOKENS",

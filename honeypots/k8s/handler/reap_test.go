@@ -15,6 +15,7 @@ func TestMaterializePodsLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -93,6 +94,7 @@ func TestDeploymentRollsOnTemplateChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(cfg)
 	if err != nil {
 		t.Fatal(err)

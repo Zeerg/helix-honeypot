@@ -81,6 +81,7 @@ Start from the checked-in example with `cp config.example.toml config.toml` and 
 | Kubernetes port | `HELIX_K8S_PORT` | `8080` |
 | Kubernetes TLS (`https://`, self-signed serving cert unless files given) | `HELIX_K8S_TLS_ENABLED`, `HELIX_K8S_TLS_CERT_FILE`, `HELIX_K8S_TLS_KEY_FILE` | off, generated |
 | Kubernetes API profile | `HELIX_K8S_API_VERSION` | `v1.37` |
+| Skip schema download and use a matching bundled schema | `HELIX_K8S_SCHEMA_OFFLINE` | `false` |
 | Kubernetes pod network base | `HELIX_K8S_IP_BASE` (`IP_BASE`) | `10.42.0.0` |
 | Additional Kubernetes namespaces | `HELIX_K8S_NAMESPACES` (comma-separated) | built-ins only |
 | Synthetic Secret lures | `HELIX_K8S_HONEYTOKENS` (`name[@ns]:k=v,k=v` entries, `;`-separated) | none |
@@ -122,9 +123,21 @@ One sink of each type can be enabled purely from the environment — `docker run
 
 ## Kubernetes API profile
 
-Helix defaults to the Kubernetes `v1.37` discovery and version profile and accepts simulated profiles from `v1.19` through `v1.37`. It is a bounded emulator, not a Kubernetes control plane or conformance server. Its in-memory object store is limited to 4,096 objects, 32 MiB total, and 256 KiB per object. List pages contain at most 100 objects and 1 MiB; concurrent list work and watches are capped. Watch replay, bookmarks, and full Kubernetes schema fidelity are not modeled.
+Helix defaults to the Kubernetes `v1.37` discovery and version profile and accepts simulated profiles from `v1.19` through `v1.37`. Both `1.25` and `v1.25` select the same profile. It is a bounded emulator, not a Kubernetes control plane or conformance server. Its in-memory object store is limited to 4,096 objects, 32 MiB total, and 256 KiB per object. List pages contain at most 100 objects and 1 MiB; concurrent list work and watches are capped. Watches without a resource version replay existing objects before live changes. Full Kubernetes schema validation and release-specific behavior are not modeled.
 
-The repository contains compressed OpenAPI v2 snapshots through `v1.27`; those are served only for their matching profiles. OpenAPI v3 and a current `v1.37` schema are not modeled yet, so clients requesting them receive a Kubernetes-style `NotFound` response rather than a stale schema presented as current.
+At startup, a `SchemaProfile` maps the selected minor version to its pinned `.0` release and official OpenAPI v2 URL. For example, `1.25` downloads `https://raw.githubusercontent.com/kubernetes/kubernetes/v1.25.0/api/openapi-spec/swagger.json`. The loader makes one HTTPS attempt before the sensor listener opens, with certificate verification, a 15-second timeout, no redirects, an 8 MiB decompressed size limit, and OpenAPI validation. Requests to the honeypot never trigger schema downloads. Downloaded schemas are held in memory for that process; no writable cache directory is required.
+
+If downloading fails or produces an invalid document, Helix uses only a matching bundled schema. Bundles exist for `v1.19` through `v1.27` and `v1.37`; an unavailable unbundled release fails startup rather than substituting `v1.27`. `HELIX_K8S_SCHEMA_OFFLINE=true` (TOML: `k8s.schema_offline = true`) skips all schema network traffic. The default Compose network restricts outbound masquerading, so use a bundled profile in offline mode there. Unbundled profiles need startup access to `raw.githubusercontent.com` over HTTPS.
+
+```sh
+# Download the official v1.25.0 schema, with an exact bundled fallback.
+HELIX_K8S_API_VERSION=1.25 go run ./cmd
+
+# Start the same profile without contacting GitHub.
+HELIX_K8S_API_VERSION=1.25 HELIX_K8S_SCHEMA_OFFLINE=true go run ./cmd
+```
+
+The selected document supplies `/openapi/v2` (JSON or protobuf, optionally gzip) and the definitions used for generated `/openapi/v3` documents. Generated v3 is a compatibility projection of v2, not an upstream v3 snapshot. Matching schemas improve client discovery and validation, but they do not implement all release-specific resources, defaults, or behavior; those remain in the emulator's version rules.
 
 ## Development
 

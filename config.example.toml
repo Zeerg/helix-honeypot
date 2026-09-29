@@ -3,6 +3,9 @@ mode = "k8s"
 
 [k8s]
 api_version = "v1.37"
+# Download the matching release schema at startup; fall back only to a
+# matching bundled schema (v1.19-v1.27 and v1.37). Set true to skip downloads.
+schema_offline = false
 ip_base = "10.42.0.0"
 generate_kube_system = true
 generate_randomness = false

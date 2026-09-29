@@ -30,6 +30,7 @@ type RunModeConfig struct {
 
 type K8SConfig struct {
 	APIVersion      string          `toml:"api_version"`
+	SchemaOffline   bool            `toml:"schema_offline"`
 	IPBase          string          `toml:"ip_base"`
 	GenerateKubeSys bool            `toml:"generate_kube_system"`
 	GenerateRand    bool            `toml:"generate_randomness"`
