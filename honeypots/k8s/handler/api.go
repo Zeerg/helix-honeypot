@@ -1670,30 +1670,25 @@ func (a *API) SetEmitter(emit func(model.Event)) {
 	a.emit = emit
 }
 
-// emitMutation records a mutating API call with a bounded JSON summary of
-// the object — the applied manifest is the highest-value signal a
-// Kubernetes honeypot can capture.
+// emitMutation records object identity, never manifest contents or credentials.
 func (a *API) emitMutation(c *echo.Context, operation string, object map[string]any) {
 	if a.emit == nil {
 		return
-	}
-	detail, err := json.Marshal(object)
-	if err != nil {
-		return
-	}
-	if len(detail) > 8<<10 {
-		detail = append(detail[:8<<10], []byte(`..."truncated":true}`)...)
 	}
 	path := ""
 	if c.Request().URL != nil {
 		path = c.Request().URL.Path
 	}
+	kind, _ := object["kind"].(string)
+	name, _ := objectMap(object["metadata"])["name"].(string)
 	a.emit(model.Event{
 		Sensor:     "kubernetes",
 		RemoteAddr: c.Request().RemoteAddr,
 		Method:     c.Request().Method,
 		Path:       path,
-		Detail:     operation + " " + string(detail),
+		Action:     "object." + operation,
+		Outcome:    "simulated",
+		Target:     kind + "/" + name,
 	})
 }
 

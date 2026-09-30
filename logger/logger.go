@@ -132,6 +132,12 @@ func (l *EventLogger) write(event model.Event, trustedClientAddr string) {
 	event.ClientAddr = normalizeIPString(trustedClientAddr)
 	event.Method = sanitizeMethod(event.Method, l.sensitiveValues)
 	event.Path = sanitizePathWithReplacer(event.Path, l.sensitiveValues)
+	event.SessionID = sanitizeUserAgent(event.SessionID, l.sensitiveValues)
+	event.Action = sanitizeUserAgent(event.Action, l.sensitiveValues)
+	event.Outcome = sanitizeUserAgent(event.Outcome, l.sensitiveValues)
+	event.Profile = sanitizeUserAgent(event.Profile, l.sensitiveValues)
+	event.Target = sanitizeUserAgent(event.Target, l.sensitiveValues)
+	event.Detail = sanitizeUserAgent(event.Detail, l.sensitiveValues)
 	if l.includeUserAgent {
 		event.UserAgent = sanitizeUserAgent(event.UserAgent, l.sensitiveValues)
 	} else {
@@ -261,7 +267,7 @@ func (r *countingReadCloser) Read(p []byte) (int, error) {
 
 func validSensor(sensor string) bool {
 	switch sensor {
-	case "http", "tcp", "udp", "kubernetes", "kubelet":
+	case "http", "tcp", "udp", "kubernetes", "kubelet", "docker":
 		return true
 	default:
 		return false
@@ -524,6 +530,11 @@ func marshalText(event model.Event) []byte {
 	line = appendTextString(line, "timestamp", event.Timestamp, false)
 	line = appendTextString(line, "event_id", event.EventID, false)
 	line = appendTextString(line, "sensor", event.Sensor, false)
+	line = appendTextString(line, "session_id", event.SessionID, true)
+	line = appendTextString(line, "action", event.Action, true)
+	line = appendTextString(line, "outcome", event.Outcome, true)
+	line = appendTextString(line, "profile", event.Profile, true)
+	line = appendTextString(line, "target", event.Target, true)
 	line = appendTextString(line, "remote_addr", event.RemoteAddr, false)
 	line = appendTextString(line, "client_addr", event.ClientAddr, true)
 	line = appendTextString(line, "method", event.Method, true)

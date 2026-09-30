@@ -21,6 +21,18 @@ x-sensor: &sensor
     - honeynet
 
 services:
+  docker:
+    <<: *sensor
+    profiles: [all, docker]
+    build: .
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: docker
+      HELIX_DOCKER_HOST: 0.0.0.0
+      HELIX_DOCKER_PORT: "2375"
+    ports:
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_DOCKER_PUBLISHED_PORT:-2375}:2375"
+
   k8s:
     <<: *sensor
     build: .

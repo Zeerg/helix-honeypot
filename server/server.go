@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"helix-honeypot/config"
+	"helix-honeypot/honeypots/docker"
 	httpMode "helix-honeypot/honeypots/http"
 	"helix-honeypot/honeypots/k8s"
 	"helix-honeypot/honeypots/kubelet"
@@ -31,6 +32,8 @@ func StartHoneypot(ctx context.Context) error {
 	}
 
 	switch cfg.RunMode.RunMode {
+	case "docker":
+		err = docker.StartDockerHoneypot(ctx, cfg)
 	case "k8s":
 		err = k8s.StartK8SHoneypot(ctx, cfg)
 	case "http":
@@ -43,7 +46,7 @@ func StartHoneypot(ctx context.Context) error {
 		err = kubelet.StartKubeletHoneypot(ctx, cfg)
 	default:
 		// Validate also protects callers constructing a configuration through a
-		// different path, keeping the dispatcher closed over these four modes.
+		// different path, keeping the dispatcher closed over supported modes.
 		return fmt.Errorf("unsupported run mode %q", cfg.RunMode.RunMode)
 	}
 	if err != nil {
