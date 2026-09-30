@@ -1,6 +1,6 @@
 # Helix Honeypot
 
-Helix is a small honeypot for Kubernetes and Docker API reconnaissance, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes structured interaction events to standard output.
+Helix is a small honeypot for Kubernetes and Docker API reconnaissance, Redis interactions, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes structured interaction events to standard output.
 
 Kubernetes and HTTP modes return bounded simulated responses. TCP and UDP modes record connection/datagram metadata and byte counts, but do not reply to the sender.
 
@@ -66,7 +66,7 @@ To run directly with Go, the default mode is Kubernetes:
 go run ./cmd
 ```
 
-Set `HELIX_RUN_MODE` to `docker`, `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
+Set `HELIX_RUN_MODE` to `redis`, `docker`, `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
 
 ## Configuration
 
@@ -78,6 +78,8 @@ Start from the checked-in example with `cp config.example.toml config.toml` and 
 | --- | --- | --- |
 | Sensor mode | `HELIX_RUN_MODE` (`RUN_MODE` is also accepted) | `k8s` |
 | Docker bind address / port | `HELIX_DOCKER_HOST`, `HELIX_DOCKER_PORT` | `127.0.0.1`, `2375` |
+| Redis bind address / port | `HELIX_REDIS_HOST`, `HELIX_REDIS_PORT` | `127.0.0.1`, `6379` |
+| Optional synthetic Redis password | `HELIX_REDIS_PASSWORD` | empty (anonymous) |
 | Kubernetes bind address | `HELIX_K8S_HOST` | `127.0.0.1` |
 | Kubernetes port | `HELIX_K8S_PORT` | `8080` |
 | Kubernetes TLS (`https://`, self-signed serving cert unless files given) | `HELIX_K8S_TLS_ENABLED`, `HELIX_K8S_TLS_CERT_FILE`, `HELIX_K8S_TLS_KEY_FILE` | off, generated |
@@ -137,6 +139,27 @@ docker --host tcp://127.0.0.1:2375 inspect test
 For an isolated container, use `docker compose --profile docker up --build -d docker`. Publishing stays on loopback unless deliberately overridden; `HELIX_DOCKER_PUBLISHED_PORT` changes its host port. No Docker socket is mounted or used. Commands, images, bind mounts, and privileged flags affect only simulated metadata. Exec creation is simulated; exec start refuses streaming/execution with HTTP 501. Pulls, builds, attach, and archives are not implemented.
 
 The sensor caps connections at 64, request bodies at 64 KiB, container records at 128, body-accounted state at 8 MiB, and exec records at 128. Deleting a container frees its records and related exec instances. Events include sanitized `action`, `outcome`, `profile`, and `target`; create events record boolean privileged/host-mount/host-network intent flags. Body contents, commands, environment values, query strings, and credentials are omitted. Kubernetes mutation events likewise contain object identity and action rather than raw manifests. All state is volatile and resets on restart.
+
+## Redis mode
+
+`HELIX_RUN_MODE=redis` emulates a Redis 7.2.5 standalone server with a small volatile string keyspace. Connections start in RESP2; `HELLO 3` selects RESP3, including map and null replies. Flat bulk-string command arrays support binary values, fragmented input, and pipelining. Inline input supports simple whitespace-separated arguments only. Nested/streamed RESP frames and full inline quoting are unsupported.
+
+```sh
+HELIX_RUN_MODE=redis go run ./cmd
+redis-cli -h 127.0.0.1 -p 6379 PING
+redis-cli -h 127.0.0.1 -p 6379 -3 HELLO 3
+redis-cli -h 127.0.0.1 -p 6379 SET example synthetic-value EX 60
+redis-cli -h 127.0.0.1 -p 6379 GET example
+redis-cli -h 127.0.0.1 -p 6379 --scan --pattern 'app:*'
+```
+
+The supported subset includes PING, ECHO, AUTH, HELLO, INFO, SET (EX/PX/NX/XX), GET, DEL, EXISTS, DBSIZE, INCR, EXPIRE/PEXPIRE, TTL/PTTL, KEYS, SCAN, SELECT 0, limited CLIENT setup commands, COMMAND, and QUIT. KEYS/SCAN support exact matches or a single trailing `*`, with SCAN pages capped at 100 keys. KEYS refuses results over 128 keys. INFO and COMMAND are minimal synthetic responses; pub/sub, transactions, cluster mode, other databases, and other data types are unsupported.
+
+`HELIX_REDIS_PASSWORD` (TOML: `redis.password`) optionally requires authentication as the `default` user; use synthetic credentials only. AUTH and HELLO AUTH work per connection. Passwords, usernames, keys, values, client names, raw command arguments, and unknown command names are omitted from telemetry. Events contain a session ID, a recognized command action, an outcome, the profile, and byte counts. The configured synthetic password is included in shared redaction. Scripting, module loading, replication, persistence, configuration changes, migration, restore, and flush commands are refused and recorded; no host commands, filesystem access, or outbound Redis connections exist.
+
+The sensor caps connections at 64, arguments at 128, command frames at 64 KiB, individual bulk strings at 32 KiB, keys at 1 KiB, values at 16 KiB, and stored data at 1,024 keys / 8 MiB of key-and-value bytes. Each session lasts at most two minutes, processes at most 1,024 commands, and transfers at most 1 MiB in each direction; idle reads time out after ten seconds. Expiry is lazy and capped at 24 hours; expiry/deletion reclaim capacity. All state resets on restart.
+
+Use `docker compose --profile redis up --build -d redis` for a separate hardened sensor container. `HELIX_REDIS_PUBLISHED_PORT` changes its loopback-published port. This sensor accepts plaintext connections; it does not provide Redis TLS.
 
 ## Kubernetes API profile
 

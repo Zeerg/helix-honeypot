@@ -95,6 +95,23 @@ func TestDockerModeDoesNotRequireKubernetesConfig(t *testing.T) {
 	}
 }
 
+func TestRedisConfigAndSyntheticPasswordRedaction(t *testing.T) {
+	clearConfigEnvironment(t)
+	t.Setenv("HELIX_RUN_MODE", "redis")
+	t.Setenv("HELIX_REDIS_HOST", "127.0.0.1")
+	t.Setenv("HELIX_REDIS_PORT", "16379")
+	t.Setenv("HELIX_REDIS_PASSWORD", "synthetic-redis-password")
+	t.Setenv("HELIX_K8S_API_VERSION", "invalid")
+	cfg, err := NewConfig(filepath.Join(t.TempDir(), "missing.toml"))
+	if err != nil || cfg.Redis.Port != "16379" || cfg.SensitiveValues()[0] != "synthetic-redis-password" {
+		t.Fatalf("Redis config: %v", err)
+	}
+	cfg.Redis.Password = strings.Repeat("x", 257)
+	if err := Validate(cfg); err == nil {
+		t.Fatal("accepted oversized password")
+	}
+}
+
 func TestNewConfigLoadsLogSinks(t *testing.T) {
 	clearConfigEnvironment(t)
 	filename := filepath.Join(t.TempDir(), "config.toml")
@@ -273,6 +290,7 @@ func clearConfigEnvironment(t *testing.T) {
 		"HELIX_K8S_TOKEN_NAMES", "HELIX_K8S_TOKEN_VALUES", "HELIX_K8S_NAMESPACES", "HELIX_K8S_HONEYTOKENS",
 		"HELIX_HTTP_HOST", "HELIX_HTTP_PORT", "HELIX_TCP_HOST", "HELIX_TCP_PORT", "HELIX_UDP_HOST", "HELIX_UDP_PORT",
 		"HELIX_DOCKER_HOST", "HELIX_DOCKER_PORT",
+		"HELIX_REDIS_HOST", "HELIX_REDIS_PORT", "HELIX_REDIS_PASSWORD",
 		"HELIX_LOG_FORMAT", "HELIX_LOG_INCLUDE_USER_AGENT", "HELIX_LOG_TRUSTED_PROXY_CIDRS",
 		"HELIX_LOG_FILE", "HELIX_SPLUNK_URL", "HELIX_SPLUNK_TOKEN", "HELIX_SPLUNK_INDEX",
 		"HELIX_SPLUNK_SOURCE", "HELIX_SPLUNK_SOURCETYPE",
