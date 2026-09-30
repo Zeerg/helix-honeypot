@@ -1,6 +1,10 @@
 [run_mode]
 mode = "k8s"
 
+[docker]
+host = "127.0.0.1"
+port = "2375"
+
 [k8s]
 api_version = "v1.37"
 ip_base = "10.42.0.0"

@@ -15,6 +15,11 @@ type TCPConfig struct {
 	Port string `toml:"port"`
 }
 
+type DockerConfig struct {
+	Host string `toml:"host"`
+	Port string `toml:"port"`
+}
+
 type KubeletConfig struct {
 	Host        string `toml:"host"`
 	Port        string `toml:"port"`
@@ -76,6 +81,7 @@ type LogSinkConfig struct {
 }
 
 type Config struct {
+	Docker  DockerConfig  `toml:"docker"`
 	HTTP    HTTPConfig    `toml:"http"`
 	UDP     UDPConfig     `toml:"udp"`
 	TCP     TCPConfig     `toml:"tcp"`

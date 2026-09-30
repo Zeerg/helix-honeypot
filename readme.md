@@ -1,6 +1,6 @@
 # Helix Honeypot
 
-Helix is a small honeypot for Kubernetes API reconnaissance, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes one structured event per interaction to standard output.
+Helix is a small honeypot for Kubernetes and Docker API reconnaissance, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes structured interaction events to standard output.
 
 Kubernetes and HTTP modes return bounded simulated responses. TCP and UDP modes record connection/datagram metadata and byte counts, but do not reply to the sender.
 
@@ -66,7 +66,7 @@ To run directly with Go, the default mode is Kubernetes:
 go run ./cmd
 ```
 
-Set `HELIX_RUN_MODE` to `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
+Set `HELIX_RUN_MODE` to `docker`, `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
 
 ## Configuration
 
@@ -77,6 +77,7 @@ Start from the checked-in example with `cp config.example.toml config.toml` and 
 | Setting | Environment variable | Default |
 | --- | --- | --- |
 | Sensor mode | `HELIX_RUN_MODE` (`RUN_MODE` is also accepted) | `k8s` |
+| Docker bind address / port | `HELIX_DOCKER_HOST`, `HELIX_DOCKER_PORT` | `127.0.0.1`, `2375` |
 | Kubernetes bind address | `HELIX_K8S_HOST` | `127.0.0.1` |
 | Kubernetes port | `HELIX_K8S_PORT` | `8080` |
 | Kubernetes TLS (`https://`, self-signed serving cert unless files given) | `HELIX_K8S_TLS_ENABLED`, `HELIX_K8S_TLS_CERT_FILE`, `HELIX_K8S_TLS_KEY_FILE` | off, generated |
@@ -119,6 +120,23 @@ One sink of each type can be enabled purely from the environment — `docker run
 ## Kubelet mode
 
 `HELIX_RUN_MODE=kubelet` emulates a kubelet with anonymous read access — the misconfiguration that makes real nodes worth scanning. `/pods` and `/runningpods` return a static workload list for the configured `node_name`, and `/healthz`, `/metrics`, `/metrics/cadvisor`, `/stats/summary`, `/configz`, `/logs/`, and `/containerLogs/<ns>/<pod>/<container>` return bounded plausible data. Streaming endpoints (`/exec`, `/attach`, `/portforward`, `/run`, `/cri`) always refuse with a kubelet-style upgrade error; the attempt is still recorded as an event.
+
+## Docker mode
+
+`HELIX_RUN_MODE=docker` emulates an anonymous Docker Engine 26.1.4 host advertising API 1.45. It supports ping, version, info, image/container discovery, container inspection, and in-memory create/start/stop/restart/kill/delete. Versioned requests accept API 1.24 through 1.45; this is a small emulated subset, not full compatibility with every Engine version. A synthetic `web` container and `alpine:3.20` image seed the host.
+
+```sh
+HELIX_RUN_MODE=docker go run ./cmd
+docker --host tcp://127.0.0.1:2375 version
+docker --host tcp://127.0.0.1:2375 ps -a
+docker --host tcp://127.0.0.1:2375 create --name test alpine:3.20 sleep 3600
+docker --host tcp://127.0.0.1:2375 start test
+docker --host tcp://127.0.0.1:2375 inspect test
+```
+
+For an isolated container, use `docker compose --profile docker up --build -d docker`. Publishing stays on loopback unless deliberately overridden; `HELIX_DOCKER_PUBLISHED_PORT` changes its host port. No Docker socket is mounted or used. Commands, images, bind mounts, and privileged flags affect only simulated metadata. Exec creation is simulated; exec start refuses streaming/execution with HTTP 501. Pulls, builds, attach, and archives are not implemented.
+
+The sensor caps connections at 64, request bodies at 64 KiB, container records at 128, body-accounted state at 8 MiB, and exec records at 128. Deleting a container frees its records and related exec instances. Events include sanitized `action`, `outcome`, `profile`, and `target`; create events record boolean privileged/host-mount/host-network intent flags. Body contents, commands, environment values, query strings, and credentials are omitted. Kubernetes mutation events likewise contain object identity and action rather than raw manifests. All state is volatile and resets on restart.
 
 ## Kubernetes API profile
 

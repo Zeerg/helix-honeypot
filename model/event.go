@@ -6,6 +6,11 @@ type Event struct {
 	Timestamp     string `json:"timestamp"`
 	EventID       string `json:"event_id"`
 	Sensor        string `json:"sensor"`
+	SessionID     string `json:"session_id,omitempty"`
+	Action        string `json:"action,omitempty"`
+	Outcome       string `json:"outcome,omitempty"`
+	Profile       string `json:"profile,omitempty"`
+	Target        string `json:"target,omitempty"`
 	RemoteAddr    string `json:"remote_addr"`
 	ClientAddr    string `json:"client_addr,omitempty"`
 	Method        string `json:"method,omitempty"`

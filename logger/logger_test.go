@@ -144,3 +144,12 @@ func TestConfiguredHoneytokenWithControlCharacterIsRedacted(t *testing.T) {
 		t.Fatalf("control-character honeytoken leaked after normalization: %s", output.String())
 	}
 }
+
+func TestProtocolFieldsRedactBeforeTruncating(t *testing.T) {
+	var output bytes.Buffer
+	l := NewEventLoggerWithConfig(&output, model.LoggingConfig{Format: "text"}, "sensitive-value")
+	l.Write(model.Event{Sensor: "docker", SessionID: "session-1", Action: "container.create", Outcome: "simulated", Profile: "docker/26.1.4", Target: strings.Repeat("x", 600) + "sensitive-value", Detail: "value=sensitive-value"})
+	if strings.Contains(output.String(), "sensitive-value") || !strings.Contains(output.String(), `target="[redacted]"`) || !strings.Contains(output.String(), "container.create") {
+		t.Fatalf("bad protocol event: %s", &output)
+	}
+}

@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/encoding/protowire"
 
 	"helix-honeypot/config"
+	"helix-honeypot/model"
 )
 
 // kubectl create secret generic test-secret --from-literal=k=v -n default
@@ -24,6 +25,17 @@ var kubectlSecretProto = []byte{
 	0x00, 0x1a, 0x07, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x22, 0x00,
 	0x2a, 0x00, 0x32, 0x00, 0x38, 0x00, 0x42, 0x00, 0x12, 0x06, 0x0a, 0x01,
 	0x6b, 0x12, 0x01, 0x76, 0x1a, 0x00, 0x1a, 0x00, 0x22, 0x00,
+}
+
+func TestMutationTelemetryOmitsManifestData(t *testing.T) {
+	var event model.Event
+	api := &API{emit: func(value model.Event) { event = value }}
+	c, _ := testContext(t, "POST", "/api/v1/namespaces/default/secrets", "", nil)
+	api.emitMutation(c, "create", map[string]any{"kind": "Secret", "metadata": map[string]any{"name": "example"}, "data": map[string]any{"password": "must-not-log"}})
+	encoded, _ := json.Marshal(event)
+	if strings.Contains(string(encoded), "must-not-log") || event.Detail != "" || event.Action != "object.create" || event.Target != "Secret/example" {
+		t.Fatalf("unsafe mutation event: %s", encoded)
+	}
 }
 
 func testContext(t *testing.T, method, target, contentType string, body []byte) (*echo.Context, *httptest.ResponseRecorder) {

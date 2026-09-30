@@ -44,9 +44,10 @@ const (
 // must opt in to binding on a network interface reachable by other machines.
 func Defaults() model.Config {
 	return model.Config{
-		HTTP: model.HTTPConfig{Host: "127.0.0.1", Port: "8081"},
-		UDP:  model.UDPConfig{Host: "127.0.0.1", Port: "9053"},
-		TCP:  model.TCPConfig{Host: "127.0.0.1", Port: "9022"},
+		Docker: model.DockerConfig{Host: "127.0.0.1", Port: "2375"},
+		HTTP:   model.HTTPConfig{Host: "127.0.0.1", Port: "8081"},
+		UDP:    model.UDPConfig{Host: "127.0.0.1", Port: "9053"},
+		TCP:    model.TCPConfig{Host: "127.0.0.1", Port: "9022"},
 		Kubelet: model.KubeletConfig{
 			Host:     "127.0.0.1",
 			Port:     "10250",
@@ -128,6 +129,8 @@ func applyEnvironment(cfg *model.Config) error {
 	setString(&cfg.K8S.Port, "HELIX_K8S_PORT", "K8S_PORT")
 	setString(&cfg.HTTP.Host, "HELIX_HTTP_HOST")
 	setString(&cfg.HTTP.Port, "HELIX_HTTP_PORT")
+	setString(&cfg.Docker.Host, "HELIX_DOCKER_HOST")
+	setString(&cfg.Docker.Port, "HELIX_DOCKER_PORT")
 	setString(&cfg.TCP.Host, "HELIX_TCP_HOST")
 	setString(&cfg.TCP.Port, "HELIX_TCP_PORT")
 	setString(&cfg.UDP.Host, "HELIX_UDP_HOST")
@@ -412,6 +415,8 @@ func Validate(cfg *model.Config) error {
 	}
 	var host, port string
 	switch cfg.RunMode.RunMode {
+	case "docker":
+		host, port = cfg.Docker.Host, cfg.Docker.Port
 	case "k8s":
 		host, port = cfg.K8S.Host, cfg.K8S.Port
 	case "http":
@@ -423,22 +428,24 @@ func Validate(cfg *model.Config) error {
 	case "kubelet":
 		host, port = cfg.Kubelet.Host, cfg.Kubelet.Port
 	default:
-		return fmt.Errorf("unknown run mode %q: choose k8s, http, tcp, udp, or kubelet", cfg.RunMode.RunMode)
+		return fmt.Errorf("unknown run mode %q: choose k8s, http, tcp, udp, kubelet, or docker", cfg.RunMode.RunMode)
 	}
 	if cfg.RunMode.RunMode == "kubelet" && !validTokenName(cfg.Kubelet.NodeName) {
 		return fmt.Errorf("invalid kubelet node_name: expected a lowercase DNS subdomain")
 	}
-	if err := validateKubernetesProfile(cfg.K8S); err != nil {
-		return err
-	}
-	if err := validateTokens(cfg.K8S); err != nil {
-		return err
-	}
-	if err := validateNamespaces(cfg.K8S.Namespaces); err != nil {
-		return err
-	}
-	if err := validateHoneytokens(cfg.K8S); err != nil {
-		return err
+	if cfg.RunMode.RunMode == "k8s" {
+		if err := validateKubernetesProfile(cfg.K8S); err != nil {
+			return err
+		}
+		if err := validateTokens(cfg.K8S); err != nil {
+			return err
+		}
+		if err := validateNamespaces(cfg.K8S.Namespaces); err != nil {
+			return err
+		}
+		if err := validateHoneytokens(cfg.K8S); err != nil {
+			return err
+		}
 	}
 	if err := validateLogging(cfg.Logging); err != nil {
 		return err
