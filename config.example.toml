@@ -5,6 +5,12 @@ mode = "k8s"
 host = "127.0.0.1"
 port = "2375"
 
+[redis]
+host = "127.0.0.1"
+port = "6379"
+# Optional synthetic password; empty permits anonymous connections.
+# password = "synthetic-only-password"
+
 [k8s]
 api_version = "v1.37"
 ip_base = "10.42.0.0"

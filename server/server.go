@@ -9,6 +9,7 @@ import (
 	httpMode "helix-honeypot/honeypots/http"
 	"helix-honeypot/honeypots/k8s"
 	"helix-honeypot/honeypots/kubelet"
+	"helix-honeypot/honeypots/redis"
 	"helix-honeypot/honeypots/tcp"
 	"helix-honeypot/honeypots/udp"
 )
@@ -32,6 +33,8 @@ func StartHoneypot(ctx context.Context) error {
 	}
 
 	switch cfg.RunMode.RunMode {
+	case "redis":
+		err = redis.StartRedisHoneypot(ctx, cfg)
 	case "docker":
 		err = docker.StartDockerHoneypot(ctx, cfg)
 	case "k8s":

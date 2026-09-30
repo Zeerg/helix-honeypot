@@ -12,6 +12,10 @@ mode = "k8s"
 host = "0.0.0.0"
 port = "2375"
 
+[redis]
+host = "0.0.0.0"
+port = "6379"
+
 [k8s]
 api_version = "v1.37"
 ip_base = "10.42.0.0"

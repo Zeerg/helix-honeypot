@@ -44,6 +44,7 @@ const (
 // must opt in to binding on a network interface reachable by other machines.
 func Defaults() model.Config {
 	return model.Config{
+		Redis:  model.RedisConfig{Host: "127.0.0.1", Port: "6379"},
 		Docker: model.DockerConfig{Host: "127.0.0.1", Port: "2375"},
 		HTTP:   model.HTTPConfig{Host: "127.0.0.1", Port: "8081"},
 		UDP:    model.UDPConfig{Host: "127.0.0.1", Port: "9053"},
@@ -131,6 +132,9 @@ func applyEnvironment(cfg *model.Config) error {
 	setString(&cfg.HTTP.Port, "HELIX_HTTP_PORT")
 	setString(&cfg.Docker.Host, "HELIX_DOCKER_HOST")
 	setString(&cfg.Docker.Port, "HELIX_DOCKER_PORT")
+	setString(&cfg.Redis.Host, "HELIX_REDIS_HOST")
+	setString(&cfg.Redis.Port, "HELIX_REDIS_PORT")
+	setString(&cfg.Redis.Password, "HELIX_REDIS_PASSWORD")
 	setString(&cfg.TCP.Host, "HELIX_TCP_HOST")
 	setString(&cfg.TCP.Port, "HELIX_TCP_PORT")
 	setString(&cfg.UDP.Host, "HELIX_UDP_HOST")
@@ -415,6 +419,11 @@ func Validate(cfg *model.Config) error {
 	}
 	var host, port string
 	switch cfg.RunMode.RunMode {
+	case "redis":
+		host, port = cfg.Redis.Host, cfg.Redis.Port
+		if len(cfg.Redis.Password) > 256 {
+			return fmt.Errorf("Redis password exceeds the 256-byte limit")
+		}
 	case "docker":
 		host, port = cfg.Docker.Host, cfg.Docker.Port
 	case "k8s":
@@ -428,7 +437,7 @@ func Validate(cfg *model.Config) error {
 	case "kubelet":
 		host, port = cfg.Kubelet.Host, cfg.Kubelet.Port
 	default:
-		return fmt.Errorf("unknown run mode %q: choose k8s, http, tcp, udp, kubelet, or docker", cfg.RunMode.RunMode)
+		return fmt.Errorf("unknown run mode %q: choose k8s, http, tcp, udp, kubelet, docker, or redis", cfg.RunMode.RunMode)
 	}
 	if cfg.RunMode.RunMode == "kubelet" && !validTokenName(cfg.Kubelet.NodeName) {
 		return fmt.Errorf("invalid kubelet node_name: expected a lowercase DNS subdomain")

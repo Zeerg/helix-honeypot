@@ -21,6 +21,19 @@ x-sensor: &sensor
     - honeynet
 
 services:
+  redis:
+    <<: *sensor
+    profiles: [all, redis]
+    build: .
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: redis
+      HELIX_REDIS_HOST: 0.0.0.0
+      HELIX_REDIS_PORT: "6379"
+      HELIX_REDIS_PASSWORD: ${HELIX_REDIS_PASSWORD-}
+    ports:
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_REDIS_PUBLISHED_PORT:-6379}:6379"
+
   docker:
     <<: *sensor
     profiles: [all, docker]

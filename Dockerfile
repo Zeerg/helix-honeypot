@@ -23,6 +23,6 @@ LABEL org.opencontainers.image.title="Helix Honeypot" \
 COPY --from=build /out/helix-honeypot /helix-honeypot
 COPY config.docker.toml /etc/helix/config.toml
 ENV HELIX_CONFIG=/etc/helix/config.toml
-EXPOSE 8080 8081 9022 9053/udp 10250 2375
+EXPOSE 8080 8081 9022 9053/udp 10250 2375 6379
 USER 65532:65532
 ENTRYPOINT ["/helix-honeypot"]
