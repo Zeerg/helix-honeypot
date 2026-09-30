@@ -139,6 +139,13 @@ func applyEnvironment(cfg *model.Config) error {
 	setString(&cfg.Kubelet.TLSKeyFile, "HELIX_KUBELET_TLS_KEY_FILE")
 	setString(&cfg.K8S.TLSCertFile, "HELIX_K8S_TLS_CERT_FILE")
 	setString(&cfg.K8S.TLSKeyFile, "HELIX_K8S_TLS_KEY_FILE")
+	if value, ok := firstSetEnv("HELIX_K8S_SCHEMA_OFFLINE"); ok {
+		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid boolean for HELIX_K8S_SCHEMA_OFFLINE")
+		}
+		cfg.K8S.SchemaOffline = parsed
+	}
 	if value, ok := firstSetEnv("HELIX_K8S_TLS_ENABLED"); ok {
 		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
 		if err != nil {
@@ -383,6 +390,9 @@ func splitList(value, variable string, maxCount, maxEntryBytes, maxInputBytes in
 func normalize(cfg *model.Config) {
 	cfg.RunMode.RunMode = strings.ToLower(strings.TrimSpace(cfg.RunMode.RunMode))
 	cfg.K8S.APIVersion = strings.TrimSpace(cfg.K8S.APIVersion)
+	if strings.HasPrefix(cfg.K8S.APIVersion, "1.") {
+		cfg.K8S.APIVersion = "v" + cfg.K8S.APIVersion
+	}
 	cfg.K8S.IPBase = strings.TrimSpace(cfg.K8S.IPBase)
 	for i := range cfg.K8S.Honeytokens {
 		cfg.K8S.Honeytokens[i].Namespace = strings.TrimSpace(cfg.K8S.Honeytokens[i].Namespace)

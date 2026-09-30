@@ -17,6 +17,7 @@ func TestNewAPISeedsConfiguredNamespacesAndHoneytokens(t *testing.T) {
 		Data:      map[string]string{"token": "synthetic-value"},
 	}}
 
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(&cfg)
 	if err != nil {
 		t.Fatalf("NewAPI() error = %v", err)

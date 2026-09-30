@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -17,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	openapi_v2 "github.com/google/gnostic/openapiv2"
 	"github.com/labstack/echo/v5"
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
@@ -193,23 +193,26 @@ var (
 	authorizationGroupVersion = groupVersion{"authorization.k8s.io", "v1"}
 )
 
-// NewAPI creates an isolated in-memory API server. OpenAPI v2 is served only
-// for versions for which the repository contains an embedded upstream snapshot.
+// NewAPI creates an isolated in-memory API server with a matching upstream
+// OpenAPI schema downloaded at startup or loaded from an exact bundled version.
 func NewAPI(cfg *model.Config) (*API, error) {
+	return NewAPIContext(context.Background(), cfg)
+}
+
+// NewAPIContext loads the matching schema before opening a sensor listener.
+func NewAPIContext(ctx context.Context, cfg *model.Config) (*API, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if cfg == nil {
 		return nil, fmt.Errorf("Kubernetes API configuration is required")
 	}
-	version := strings.TrimSpace(cfg.K8S.APIVersion)
-	if version == "" {
-		version = "v1.37"
-	}
-	minor, err := parseKubernetesVersion(version)
+	profile, err := SchemaProfileForVersion(cfg.K8S.APIVersion)
 	if err != nil {
 		return nil, err
 	}
-	if minor < 19 || minor > 37 {
-		return nil, fmt.Errorf("unsupported Kubernetes API profile %q: supported simulated profiles are v1.19 through v1.37", version)
-	}
+	version := profile.Version
+	minor, _ := parseKubernetesVersion(version)
 
 	api := &API{
 		version:      version,
@@ -257,71 +260,38 @@ func NewAPI(cfg *model.Config) (*API, error) {
 			return nil, fmt.Errorf("Kubernetes decoy secret names must be valid DNS subdomains")
 		}
 	}
-	fixtureVersion := version
-	if minor > 27 {
-		// No fixture for newer profiles; schemas are version-agnostic io.k8s
-		// names, so the newest embedded document validates them fine.
-		fixtureVersion = "v1.27"
+	fixture, document, err := loadOpenAPISchema(ctx, profile, cfg.K8S.SchemaOffline, schemaHTTPClient())
+	if err != nil {
+		return nil, err
 	}
-	{
-		compressedFixture, err := embeddedFS.ReadFile("embedded/openapi/" + fixtureVersion + "_openapi.json.gz")
-		if err != nil {
-			return nil, fmt.Errorf("OpenAPI v2 fixture for %s is unavailable: %w", fixtureVersion, err)
-		}
-		reader, err := gzip.NewReader(bytes.NewReader(compressedFixture))
-		if err != nil {
-			return nil, fmt.Errorf("open compressed OpenAPI v2 fixture for %s: %w", version, err)
-		}
-		fixture, err := io.ReadAll(io.LimitReader(reader, maxOpenAPIDocumentBytes+1))
-		if err != nil {
-			reader.Close()
-			return nil, fmt.Errorf("read OpenAPI v2 fixture for %s: %w", version, err)
-		}
-		if err := reader.Close(); err != nil {
-			return nil, fmt.Errorf("close OpenAPI v2 fixture for %s: %w", version, err)
-		}
-		if len(fixture) > maxOpenAPIDocumentBytes {
-			return nil, fmt.Errorf("OpenAPI v2 fixture for %s exceeds the configured document limit", version)
-		}
-		document, err := openapi_v2.ParseDocument(fixture)
-		if err != nil {
-			return nil, fmt.Errorf("OpenAPI v2 fixture for %s is invalid: %w", version, err)
-		}
-		binaryDoc, err := proto.Marshal(document)
-		if err != nil {
-			return nil, fmt.Errorf("encode OpenAPI v2 fixture for %s: %w", version, err)
-		}
-		var compressed bytes.Buffer
-		zw := gzip.NewWriter(&compressed)
-		if _, err := zw.Write(binaryDoc); err != nil {
-			return nil, fmt.Errorf("compress OpenAPI v2 fixture for %s: %w", version, err)
-		}
-		if err := zw.Close(); err != nil {
-			return nil, fmt.Errorf("finish OpenAPI v2 fixture for %s: %w", version, err)
-		}
-		api.openAPIV2JSON = fixture
-		api.openAPIV2JSONGzip = compressedFixture
-		api.openAPIV2ProtoGzip = compressed.Bytes()
-		api.openAPIETags["json"] = etag(fixture)
-		api.openAPIETags["json-gzip"] = etag(compressedFixture)
-		api.openAPIETags["protobuf"] = etag(binaryDoc)
-		api.openAPIETags["protobuf-gzip"] = etag(api.openAPIV2ProtoGzip)
+	binaryDoc, err := proto.Marshal(document)
+	if err != nil {
+		return nil, fmt.Errorf("encode OpenAPI v2 schema for %s: %w", version, err)
 	}
-	// OpenAPI v3 docs are generated from the embedded v2 definitions, which are
-	// version-agnostic io.k8s schemas; the newest fixture covers every served
-	// profile closely enough for kubectl explain and apply validation.
-	schemasSource := api.openAPIV2JSON
-	if schemasSource == nil {
-		if compressedFixture, err := embeddedFS.ReadFile("embedded/openapi/v1.27_openapi.json.gz"); err == nil {
-			if reader, err := gzip.NewReader(bytes.NewReader(compressedFixture)); err == nil {
-				schemasSource, _ = io.ReadAll(io.LimitReader(reader, maxOpenAPIDocumentBytes+1))
-				reader.Close()
-			}
+	compress := func(data []byte) ([]byte, error) {
+		var output bytes.Buffer
+		writer := gzip.NewWriter(&output)
+		if _, err := writer.Write(data); err != nil {
+			return nil, err
 		}
+		if err := writer.Close(); err != nil {
+			return nil, err
+		}
+		return output.Bytes(), nil
 	}
-	if len(schemasSource) > 0 {
-		api.openAPIV3Schemas, api.openAPIV3Known = openAPIV3Schemas(schemasSource)
+	api.openAPIV2JSON = fixture
+	if api.openAPIV2JSONGzip, err = compress(fixture); err != nil {
+		return nil, fmt.Errorf("compress OpenAPI JSON: %w", err)
 	}
+	if api.openAPIV2ProtoGzip, err = compress(binaryDoc); err != nil {
+		return nil, fmt.Errorf("compress OpenAPI protobuf: %w", err)
+	}
+	api.openAPIETags["json"] = etag(fixture)
+	api.openAPIETags["json-gzip"] = etag(api.openAPIV2JSONGzip)
+	api.openAPIETags["protobuf"] = etag(binaryDoc)
+	api.openAPIETags["protobuf-gzip"] = etag(api.openAPIV2ProtoGzip)
+	// The generated v3 documents use definitions from the same release as v2.
+	api.openAPIV3Schemas, api.openAPIV3Known = openAPIV3Schemas(fixture)
 	api.openAPIV3Cache = make(map[string][]byte, 8)
 	api.store = newObjectStore()
 	api.seed(cfg)

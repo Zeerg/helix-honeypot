@@ -116,6 +116,7 @@ func TestApplyJSONPatch(t *testing.T) {
 
 func TestSeedsClusterBasics(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(&cfg)
 	if err != nil {
 		t.Fatalf("NewAPI() error = %v", err)
@@ -136,6 +137,7 @@ func TestSeedsClusterBasics(t *testing.T) {
 
 func TestServePodLog(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(&cfg)
 	if err != nil {
 		t.Fatalf("NewAPI() error = %v", err)
@@ -164,6 +166,7 @@ func TestServePodLog(t *testing.T) {
 
 func TestServeAccessReviewAllowsEverything(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(&cfg)
 	if err != nil {
 		t.Fatalf("NewAPI() error = %v", err)
@@ -189,6 +192,7 @@ func TestServeAccessReviewAllowsEverything(t *testing.T) {
 
 func TestServeMetricsListsNodesAndPods(t *testing.T) {
 	cfg := config.Defaults()
+	cfg.K8S.SchemaOffline = true
 	api, err := NewAPI(&cfg)
 	if err != nil {
 		t.Fatalf("NewAPI() error = %v", err)

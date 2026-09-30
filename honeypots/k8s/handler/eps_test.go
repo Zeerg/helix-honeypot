@@ -8,6 +8,7 @@ import (
 
 func TestSyncEndpoints(t *testing.T) {
 	cfg, _ := config.NewConfig("")
+	cfg.K8S.SchemaOffline = true
 	api, _ := NewAPI(cfg)
 	gv := groupVersion{"apps", "v1"}
 	deploy := map[string]any{

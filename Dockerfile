@@ -3,6 +3,7 @@ ARG GO_VERSION=1.27.1
 FROM golang:${GO_VERSION}-alpine AS build
 
 WORKDIR /src
+RUN apk add --no-cache ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -21,6 +22,7 @@ LABEL org.opencontainers.image.title="Helix Honeypot" \
       org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /out/helix-honeypot /helix-honeypot
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY config.docker.toml /etc/helix/config.toml
 ENV HELIX_CONFIG=/etc/helix/config.toml
 EXPOSE 8080 8081 9022 9053/udp 10250

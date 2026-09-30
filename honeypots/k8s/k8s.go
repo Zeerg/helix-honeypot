@@ -31,7 +31,7 @@ func StartK8SHoneypot(ctx context.Context, cfg *model.Config) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	api, err := handler.NewAPI(cfg)
+	api, err := handler.NewAPIContext(ctx, cfg)
 	if err != nil {
 		return err
 	}
