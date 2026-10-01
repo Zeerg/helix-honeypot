@@ -306,3 +306,26 @@ func clearConfigEnvironment(t *testing.T) {
 		t.Setenv(key, "")
 	}
 }
+
+func TestAIConfigAndSyntheticTokenRedaction(t *testing.T) {
+	t.Setenv("HELIX_RUN_MODE", "ai")
+	t.Setenv("HELIX_AI_PORT", "11435")
+	t.Setenv("HELIX_AI_TOKEN", "synthetic-ai-token")
+	cfg, err := NewConfig(t.TempDir() + "/missing.toml")
+	if err != nil || cfg.AI.Host != "127.0.0.1" || cfg.AI.Port != "11435" || cfg.SensitiveValues()[0] != "synthetic-ai-token" {
+		t.Fatalf("AI config: %v", err)
+	}
+	cfg.K8S.APIVersion = "invalid"
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("AI depended on Kubernetes: %v", err)
+	}
+	cfg.AI.Host = "example.com"
+	if err := Validate(cfg); err == nil {
+		t.Fatal("accepted hostname")
+	}
+	cfg.AI.Host = "127.0.0.1"
+	cfg.AI.Token = strings.Repeat("x", 257)
+	if err := Validate(cfg); err == nil {
+		t.Fatal("accepted oversized token")
+	}
+}

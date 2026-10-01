@@ -267,7 +267,7 @@ func (r *countingReadCloser) Read(p []byte) (int, error) {
 
 func validSensor(sensor string) bool {
 	switch sensor {
-	case "http", "tcp", "udp", "kubernetes", "kubelet", "docker":
+	case "http", "tcp", "udp", "kubernetes", "kubelet", "docker", "ai":
 		return true
 	default:
 		return false

@@ -20,6 +20,12 @@ type DockerConfig struct {
 	Port string `toml:"port"`
 }
 
+type AIConfig struct {
+	Host  string `toml:"host"`
+	Port  string `toml:"port"`
+	Token string `toml:"token"`
+}
+
 type KubeletConfig struct {
 	Host        string `toml:"host"`
 	Port        string `toml:"port"`
@@ -82,6 +88,7 @@ type LogSinkConfig struct {
 }
 
 type Config struct {
+	AI      AIConfig      `toml:"ai"`
 	Docker  DockerConfig  `toml:"docker"`
 	HTTP    HTTPConfig    `toml:"http"`
 	UDP     UDPConfig     `toml:"udp"`
@@ -95,7 +102,11 @@ type Config struct {
 // SensitiveValues returns a bounded copy of all configured credential material
 // for exact event-log redaction. Values are never emitted by this method.
 func (c Config) SensitiveValues() []string {
-	return mergeSensitive(c.K8S.SensitiveValues(), c.Logging.SensitiveValues())
+	values := c.K8S.SensitiveValues()
+	if c.AI.Token != "" {
+		values = append([]string{c.AI.Token}, values...)
+	}
+	return mergeSensitive(values, c.Logging.SensitiveValues())
 }
 
 // SensitiveValues returns configured sink credentials for event-log redaction.
