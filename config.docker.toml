@@ -8,6 +8,12 @@
 [run_mode]
 mode = "k8s"
 
+[ai]
+host = "0.0.0.0"
+port = "11434"
+# Optional synthetic token for Bearer / x-api-key authentication.
+# token = "synthetic-only-token"
+
 [docker]
 host = "0.0.0.0"
 port = "2375"

@@ -1,6 +1,6 @@
 # Helix Honeypot
 
-Helix is a small honeypot for Kubernetes and Docker API reconnaissance, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes structured interaction events to standard output.
+Helix is a small honeypot for Kubernetes and Docker API reconnaissance, Ollama and AI API interactions, a misconfigured kubelet façade, and basic HTTP, TCP, and UDP probes. It returns bounded simulated responses and writes structured interaction events to standard output.
 
 Kubernetes and HTTP modes return bounded simulated responses. TCP and UDP modes record connection/datagram metadata and byte counts, but do not reply to the sender.
 
@@ -32,7 +32,7 @@ curl http://127.0.0.1:8080/version
 curl http://127.0.0.1:8080/readyz
 ```
 
-Start all four sensor modes when needed:
+Start all available sensor modes when needed:
 
 ```sh
 docker compose --profile all up --build -d
@@ -66,7 +66,7 @@ To run directly with Go, the default mode is Kubernetes:
 go run ./cmd
 ```
 
-Set `HELIX_RUN_MODE` to `docker`, `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
+Set `HELIX_RUN_MODE` to `ai`, `docker`, `http`, `tcp`, `udp`, or `kubelet` to select another sensor. `def` mode has been retired because its previous infinite-response behavior could consume unbounded resources.
 
 ## Configuration
 
@@ -77,6 +77,8 @@ Start from the checked-in example with `cp config.example.toml config.toml` and 
 | Setting | Environment variable | Default |
 | --- | --- | --- |
 | Sensor mode | `HELIX_RUN_MODE` (`RUN_MODE` is also accepted) | `k8s` |
+| AI bind address / port | `HELIX_AI_HOST`, `HELIX_AI_PORT` | `127.0.0.1`, `11434` |
+| Optional synthetic AI token | `HELIX_AI_TOKEN` | empty (anonymous) |
 | Docker bind address / port | `HELIX_DOCKER_HOST`, `HELIX_DOCKER_PORT` | `127.0.0.1`, `2375` |
 | Kubernetes bind address | `HELIX_K8S_HOST` | `127.0.0.1` |
 | Kubernetes port | `HELIX_K8S_PORT` | `8080` |
@@ -138,6 +140,46 @@ docker --host tcp://127.0.0.1:2375 inspect test
 For an isolated container, use `docker compose --profile docker up --build -d docker`. Publishing stays on loopback unless deliberately overridden; `HELIX_DOCKER_PUBLISHED_PORT` changes its host port. No Docker socket is mounted or used. Commands, images, bind mounts, and privileged flags affect only simulated metadata. Exec creation is simulated; exec start refuses streaming/execution with HTTP 501. Pulls, builds, attach, and archives are not implemented.
 
 The sensor caps connections at 64, request bodies at 64 KiB, container records at 128, body-accounted state at 8 MiB, and exec records at 128. Deleting a container frees its records and related exec instances. Events include sanitized `action`, `outcome`, `profile`, and `target`; create events record boolean privileged/host-mount/host-network intent flags. Body contents, commands, environment values, query strings, and credentials are omitted. Kubernetes mutation events likewise contain object identity and action rather than raw manifests. All state is volatile and resets on restart.
+
+## AI mode
+
+`HELIX_RUN_MODE=ai` serves an Ollama façade plus OpenAI-compatible Chat Completions/Responses and Anthropic-compatible Messages on one HTTP listener. These are bounded text protocol subsets with synthetic replies, not actual inference or complete provider API implementations.
+
+```sh
+HELIX_RUN_MODE=ai go run ./cmd
+curl http://127.0.0.1:11434/api/tags
+curl http://127.0.0.1:11434/v1/models
+curl http://127.0.0.1:11434/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Use `docker compose --profile ai up --build -d ai` for a separate hardened container. `HELIX_AI_PUBLISHED_PORT` changes its host port; publishing defaults to loopback. A client can use `http://127.0.0.1:11434` for Ollama/Anthropic and `http://127.0.0.1:11434/v1` for OpenAI. Synthetic model aliases are `llama3.2:latest` (`llama3.2` also accepted), `gpt-4o-mini`, and `claude-3-5-sonnet-latest`; they are lure names, not claims about current provider models. Other models receive a fixed 404 without reflecting their name.
+
+| Surface | Supported routes | Streaming |
+| --- | --- | --- |
+| Ollama 0.5.7 discovery façade | GET/HEAD `/`, `/api/version`, `/api/tags`, `/api/ps`; POST `/api/show`, `/api/chat`, `/api/generate` | Chat/generate default to NDJSON; `stream:false` returns JSON |
+| OpenAI text subset | GET `/v1/models`; POST `/v1/chat/completions`, `/v1/responses` | Opt-in SSE, Chat `[DONE]`, Responses lifecycle events |
+| Anthropic text subset | POST `/v1/messages`, `/v1/messages/count_tokens` | Opt-in SSE with Messages lifecycle events |
+
+`HELIX_AI_TOKEN` (TOML `ai.token`) optionally requires a synthetic `Authorization: Bearer ...` token for Ollama/OpenAI or `x-api-key` for Anthropic Messages. No token is required by default. TLS terminates at an operator-provided proxy; this listener is plain HTTP.
+
+Each completion returns a fixed greeting. Positive output budgets shorten that greeting using synthetic token chunks; usage and count-token responses are synthetic, not real provider tokenization. Other generation controls are ignored. Tool definitions and image/URL content can be observed structurally but are never invoked, fetched or returned. Tool calls, real multimodal generation, structured output, embeddings, model retrieval by ID, batches, Realtime, and stored/background conversations are not implemented. Responses always report `store:false`; previous-response/conversation IDs and background work are rejected. Ollama pull/push/create/copy/delete attempts are refused with 501 and recorded. There is no model backend, provider API call, download, subprocess, tool executor or persistent payload store.
+
+Limits: 64 accepted connections, 32 concurrent body-processing requests, 128 requests and two minutes per keepalive connection (checked on each request), 64 KiB bodies, 32 JSON nesting levels, 128 messages/tools/content blocks per list, and 32 KiB generated wire output. Headers are capped at 16 KiB, paths at 4 KiB, and query strings at 8 KiB. Header/read/write/idle timeouts are 5/5/10/15 seconds. Compressed requests are rejected. Shutdown drains for up to three seconds before closing remaining sockets.
+
+AI events record a connection session ID, constant route/action, protocol profile, outcome, status, byte counts, and message/tool counts. Prompts, system instructions, tools/arguments, client metadata, requested model names, credentials, headers and query strings are omitted, including opt-in user-agent settings. Unknown paths are recorded as `/unknown`. Events go through the same sanitized sink pipeline as other sensors.
+
+The reproducible SDK smoke check launches temporary loopback processes with isolated configuration and fake keys:
+
+```sh
+go build -o /tmp/helix-ai-sensor ./cmd
+python3 -m venv /tmp/helix-ai-clients
+/tmp/helix-ai-clients/bin/pip install -r scripts/requirements-ai-smoke.txt
+/tmp/helix-ai-clients/bin/python scripts/test_ai_clients.py --binary /tmp/helix-ai-sensor
+```
+
+Wire formats follow the official [Ollama API](https://docs.ollama.com/api/chat), [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [OpenAI streaming Responses](https://developers.openai.com/api/docs/guides/streaming-responses), and [Anthropic streaming Messages](https://platform.claude.com/docs/en/build-with-claude/streaming) documentation. Compatibility verification is scoped to the above SDK calls and supported subsets.
 
 ## Kubernetes API profile
 

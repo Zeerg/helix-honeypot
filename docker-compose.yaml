@@ -21,6 +21,19 @@ x-sensor: &sensor
     - honeynet
 
 services:
+  ai:
+    <<: *sensor
+    profiles: [all, ai]
+    build: .
+    environment:
+      <<: *log-options
+      HELIX_RUN_MODE: ai
+      HELIX_AI_HOST: 0.0.0.0
+      HELIX_AI_PORT: "11434"
+      HELIX_AI_TOKEN: ${HELIX_AI_TOKEN-}
+    ports:
+      - "${HELIX_PUBLISH_HOST:-127.0.0.1}:${HELIX_AI_PUBLISHED_PORT:-11434}:11434"
+
   docker:
     <<: *sensor
     profiles: [all, docker]

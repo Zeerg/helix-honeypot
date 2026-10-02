@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"helix-honeypot/config"
+	"helix-honeypot/honeypots/ai"
 	"helix-honeypot/honeypots/docker"
 	httpMode "helix-honeypot/honeypots/http"
 	"helix-honeypot/honeypots/k8s"
@@ -32,6 +33,8 @@ func StartHoneypot(ctx context.Context) error {
 	}
 
 	switch cfg.RunMode.RunMode {
+	case "ai":
+		err = ai.StartAIHoneypot(ctx, cfg)
 	case "docker":
 		err = docker.StartDockerHoneypot(ctx, cfg)
 	case "k8s":
